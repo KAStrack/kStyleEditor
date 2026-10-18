@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kStyleEditor — a visual CSS editor for a &lt;textarea&gt;</title>
+<meta name="description" content="A zero-dependency JavaScript style editor that takes over a textarea and writes plain CSS declarations, with server-side sanitiser SDKs for PHP, Python, Node, C#, Go and Ruby.">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="dist/k-style-editor.min.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.0</span></a>
+    <nav class="site-nav">
+      <a href="./" aria-current="page">Home</a>
+      <a href="demo.html">Playground</a>
+      <a href="docs.html">Docs</a>
+      <a href="https://github.com/KAStrack/kStyleEditor">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1>Let your users style it, without letting them break it.</h1>
+    <p class="lede">
+      kStyleEditor takes over a <code>&lt;textarea&gt;</code> and puts a visual style editor
+      in its place: colours, fonts, spacing, borders, shadows and fifty-odd more. Every change
+      writes plain CSS declarations back into the textarea, so your form posts exactly as it
+      always did, and a one-line SDK call on the server makes that CSS safe to render.
+    </p>
+    <div class="pill-row">
+      <span class="pill">No dependencies</span>
+      <span class="pill">No build step</span>
+      <span class="pill">~17 KB of JS, gzipped</span>
+      <span class="pill">Live preview</span>
+      <span class="pill">PHP · Python · Node · C# · Go · Ruby SDKs</span>
+      <span class="pill">MIT</span>
+    </div>
+    <p>
+      <a class="btn" href="demo.html">Open the playground</a>
+      <a class="btn secondary" href="docs.html">Read the docs</a>
+    </p>
+  </div>
+
+  <section>
+    <h2>Try it</h2>
+    <p>
+      A form builder usually stores one piece of CSS per element. Pick an element, change
+      anything, and it restyles as you go. Each one has its own <code>&lt;textarea&gt;</code>
+      and its own editor; the panel underneath shows what a server would render from them.
+    </p>
+
+    <div class="target-picker" role="group" aria-label="Element to style">
+      <button type="button" data-target="heading" aria-pressed="false">Heading</button>
+      <button type="button" data-target="input" aria-pressed="true">Text input</button>
+      <button type="button" data-target="button" aria-pressed="false">Button</button>
+    </div>
+
+    <div class="try">
+      <div>
+        <textarea id="css-heading" class="data-input" aria-label="Heading CSS">font-size: 22px;
+font-weight: 700;</textarea>
+        <textarea id="css-input" class="data-input" aria-label="Text input CSS">border: 1px solid #94a3b8;
+border-radius: 6px;
+padding: 10px 12px;</textarea>
+        <textarea id="css-button" class="data-input" aria-label="Button CSS">color: #ffffff;
+background-color: #2f6fd0;
+padding: 10px 20px;
+border: 0;
+border-radius: 999px;
+font-weight: 600;</textarea>
+      </div>
+      <div class="stage-col">
+        <div class="stage">
+          <form class="sample-form" id="signup" onsubmit="return false">
+            <h3 id="t-heading">Join the newsletter</h3>
+            <label for="t-email">Email address</label>
+            <input id="t-input" type="email" placeholder="you@example.com" aria-describedby="t-email">
+            <span id="t-email" hidden>Email address</span>
+            <button id="t-button" class="sample-button" type="submit">Subscribe</button>
+          </form>
+        </div>
+        <label class="field-label" for="server-out" style="margin-top:16px">Rendered by the server SDK</label>
+        <pre class="output" id="server-out" tabindex="0"></pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Examples</h2>
+    <p>Each one is live. <strong>View source</strong> shows exactly what runs.</p>
+
+    <div class="examples">
+
+      <article class="example" id="ex1">
+        <div class="example-head"><span class="example-num">01</span><h3>Basic controls only</h3></div>
+        <div class="example-body">
+          <p>The five default basic controls, with the Advanced and Code tabs turned off.</p>
+          <div class="example-demo">
+            <textarea id="ex1-css">color: #1d4ed8;
+padding: 12px;</textarea>
+          </div>
+          <script type="text/plain" data-example>
+            KStyleEditor.attach('#ex1-css', {
+              advanced: false,
+              code: false,
+              preview: true
+            });
+          </script>
+          <details class="src"><summary>View source</summary><pre><code></code></pre></details>
+        </div>
+      </article>
+
+      <article class="example" id="ex2">
+        <div class="example-head"><span class="example-num">02</span><h3>Choose the controls</h3></div>
+        <div class="example-body">
+          <p>Any control can go in either group, in any order. Here a button editor gets colour, font and border up front, and three effects behind Advanced.</p>
+          <div class="example-demo">
+            <textarea id="ex2-css">color: #fff;
+background-color: #0f766e;
+border-radius: 6px;</textarea>
+          </div>
+          <script type="text/plain" data-example>
+            KStyleEditor.attach('#ex2-css', {
+              basic: ['color', 'background', 'font', 'border'],
+              advanced: ['borderRadius', 'boxShadow', 'opacity'],
+              preview: true,
+              previewContent: 'Buy now'
+            });
+          </script>
+          <details class="src"><summary>View source</summary><pre><code></code></pre></details>
+        </div>
+      </article>
+
+      <article class="example" id="ex3">
+        <div class="example-head"><span class="example-num">03</span><h3>Save a whole rule</h3></div>
+        <div class="example-body">
+          <p>By default the textarea holds bare declarations. Pass <code>selector</code> and it holds a complete rule instead. Either form reads back in.</p>
+          <div class="example-demo">
+            <textarea id="ex3-css" class="data-input" aria-label="Saved CSS">color: #b91c1c;
+font-weight: 600;</textarea>
+          </div>
+          <script type="text/plain" data-example>
+            KStyleEditor.attach('#ex3-css', {
+              selector: '#signup .error',
+              basic: ['color', 'font'],
+              advanced: false,
+              hideTextarea: false
+            });
+          </script>
+          <details class="src"><summary>View source</summary><pre><code></code></pre></details>
+        </div>
+      </article>
+
+      <article class="example" id="ex4">
+        <div class="example-head"><span class="example-num">04</span><h3>Style a real element</h3></div>
+        <div class="example-body">
+          <p>Give <code>preview</code> an element (or a selector) and that element is restyled live. Its own inline style is kept, and put back on <code>destroy()</code>.</p>
+          <div class="example-demo">
+            <div class="preview-box">
+              <p id="ex4-target" style="margin:0">This paragraph is the preview.</p>
+            </div>
+            <textarea id="ex4-css">color: #7c3aed;
+letter-spacing: 0.02em;</textarea>
+            <button type="button" class="btn secondary" id="ex4-toggle">Detach</button>
+          </div>
+          <script type="text/plain" data-example>
+            var ex4 = KStyleEditor.attach('#ex4-css', {
+              preview: '#ex4-target',
+              startTab: 'advanced'
+            });
+            document.getElementById('ex4-toggle').addEventListener('click', function () {
+              if (KStyleEditor.get('#ex4-css')) {
+                KStyleEditor.detach('#ex4-css');
+                this.textContent = 'Attach again';
+              } else {
+                KStyleEditor.attach('#ex4-css', { preview: '#ex4-target' });
+                this.textContent = 'Detach';
+              }
+            });
+          </script>
+          <details class="src"><summary>View source</summary><pre><code></code></pre></details>
+        </div>
+      </article>
+
+      <article class="example" id="ex5">
+        <div class="example-head"><span class="example-num">05</span><h3>From data attributes</h3></div>
+        <div class="example-body">
+          <p>Mark the textareas up and attach them all in one call. Attributes set the common options; anything else goes in the call.</p>
+          <div class="example-demo">
+            <textarea data-k-style
+                      data-k-style-basic="color,background,padding"
+                      data-k-style-advanced="false"
+                      data-k-style-preview="true">color: #047857;
+background-color: #ecfdf5;</textarea>
+          </div>
+          <script type="text/plain" data-example>
+            KStyleEditor.attachAll('#ex5 textarea[data-k-style]', { code: false });
+          </script>
+          <details class="src"><summary>View source</summary><pre><code></code></pre></details>
+        </div>
+      </article>
+
+      <article class="example" id="ex6">
+        <div class="example-head"><span class="example-num">06</span><h3>Dark theme and brand swatches</h3></div>
+        <div class="example-body">
+          <p><code>theme</code> pins light or dark (by default it follows the page). <code>swatches</code> replaces the colour palette with your brand colours, each with a name.</p>
+          <div class="example-demo">
+            <textarea id="ex6-css">color: #f8fafc;
+background-color: #1e293b;
+padding: 16px;</textarea>
+          </div>
+          <script type="text/plain" data-example>
+            KStyleEditor.attach('#ex6-css', {
+              theme: 'dark',
+              swatches: [
+                ['#0f172a', 'Midnight'], ['#1e293b', 'Slate'], ['#f8fafc', 'Snow'], ['#f59e0b', 'Sunrise'],
+                ['#10b981', 'Mint'], ['#ef4444', 'Signal red'], ['transparent', 'None']
+              ],
+              preview: true
+            });
+          </script>
+          <details class="src"><summary>View source</summary><pre><code></code></pre></details>
+        </div>
+      </article>
+
+      <article class="example" id="ex7">
+        <div class="example-head"><span class="example-num">07</span><h3>Your own controls</h3></div>
+        <div class="example-body">
+          <p>A control is a title and a list of fields, each built from the same widgets as the built-ins. This one sets a CSS custom property, and offers padding as three named sizes.</p>
+          <div class="example-demo">
+            <textarea id="ex7-css">--accent: #e11d48;
+padding: 8px 16px;</textarea>
+          </div>
+          <script type="text/plain" data-example>
+            var card = document.createElement('div');
+            card.innerHTML = '<strong style="color: var(--accent)">Accent heading</strong>' +
+              '<div style="border-left: 4px solid var(--accent); padding-left: 8px; margin-top: 6px">' +
+              'Everything here reads --accent.</div>';
+
+            KStyleEditor.attach('#ex7-css', {
+              basic: ['accent', 'size', 'color'],
+              advanced: false,
+              controls: {
+                accent: { label: 'Accent', fields: [{ type: 'color', prop: '--accent' }] },
+                size: { label: 'Size', fields: [{ type: 'select', prop: 'padding', options: [
+                  ['4px 8px', 'Small'], ['8px 16px', 'Medium'], ['12px 24px', 'Large']
+                ] }] }
+              },
+              preview: true,
+              previewContent: card
+            });
+          </script>
+          <details class="src"><summary>View source</summary><pre><code></code></pre></details>
+        </div>
+      </article>
+
+      <article class="example" id="ex8">
+        <div class="example-head"><span class="example-num">08</span><h3>Strict and sanitised</h3></div>
+        <div class="example-body">
+          <p>Open <strong>Code</strong> and paste anything. <code>strict</code> keeps only what the enabled controls can edit; <code>sanitize</code> also drops what the server SDK would refuse. The Code tab says what was left out, and why.</p>
+          <div class="example-demo">
+            <textarea id="ex8-css">color: #334155;
+content: "not on the list";
+background-image: url(javascript:alert(1));</textarea>
+          </div>
+          <script type="text/plain" data-example>
+            KStyleEditor.attach('#ex8-css', {
+              strict: true,
+              sanitize: true,
+              startTab: 'code',
+              onChange: function (css) { console.log('saved:', css); }
+            });
+          </script>
+          <details class="src"><summary>View source</summary><pre><code></code></pre></details>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>On the server</h2>
+    <p>
+      Whatever reaches your server came from a browser, so treat it as untrusted. Each SDK
+      parses the declarations, keeps only allowed properties with safe values, and can wrap
+      the result in your selector, ready to drop into a <code>&lt;style&gt;</code> block.
+    </p>
+<pre><code>// PHP
+echo Kastrack\StyleEditor\Css::sanitize($row['css'], ['selector' =&gt; '#field-12']);
+
+# Python
+kstyle_editor.sanitize(row.css, selector="#field-12")
+
+// Node
+require('@kastrack/style-editor').sanitize(row.css, { selector: '#field-12' });</code></pre>
+    <p><a href="docs.html#sdks">C#, Go and Ruby, and the full rules →</a></p>
+  </section>
+
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    kStyleEditor 0.1.0 — MIT licensed.
+    <a href="https://github.com/KAStrack/kStyleEditor">Source on GitHub</a>.
+  </div>
+</footer>
+
+<script src="dist/k-style-css.min.js"></script>
+<script src="dist/k-style-editor.min.js"></script>
+<script>
+  (function () {
+    var targets = {
+      heading: { el: '#t-heading', selector: '#signup h3', basic: ['color', 'font'] },
+      input: { el: '#t-input', selector: '#signup input', basic: ['color', 'background', 'border', 'padding', 'font'] },
+      button: { el: '#t-button', selector: '#signup button', basic: ['color', 'background', 'font', 'padding', 'border'] }
+    };
+    var out = document.getElementById('server-out');
+
+    function render() {
+      out.textContent = Object.keys(targets).map(function (k) {
+        var css = document.getElementById('css-' + k).value;
+        return KStyleCss.sanitize(css, { selector: targets[k].selector });
+      }).filter(Boolean).join('\n\n');
+    }
+
+    Object.keys(targets).forEach(function (k) {
+      var t = targets[k];
+      var area = document.getElementById('css-' + k);
+      t.editor = KStyleEditor.attach(area, {
+        basic: t.basic,
+        preview: t.el,
+        onChange: render
+      });
+    });
+
+    function show(name) {
+      Object.keys(targets).forEach(function (k) {
+        targets[k].editor.root.hidden = k !== name;
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('.target-picker button'), function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-target') === name ? 'true' : 'false');
+      });
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.target-picker button'), function (b) {
+      b.addEventListener('click', function () { show(b.getAttribute('data-target')); });
+    });
+
+    show('input');
+    render();
+  }());
+</script>
+<script src="assets/examples.js"></script>
+</body>
+</html>

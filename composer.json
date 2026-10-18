@@ -1,0 +1,23 @@
+{
+    "name": "kastrack/style-editor",
+    "description": "Server-side sanitiser for the CSS that kStyleEditor writes: parse, allow-list and re-serialise untrusted CSS declarations.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["css", "sanitize", "sanitizer", "style-editor", "security"],
+    "homepage": "https://kastrack.github.io/kStyleEditor/",
+    "support": {
+        "issues": "https://github.com/KAStrack/kStyleEditor/issues",
+        "source": "https://github.com/KAStrack/kStyleEditor"
+    },
+    "require": {
+        "php": ">=8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kastrack\\StyleEditor\\": "sdk/php/src/"
+        }
+    },
+    "scripts": {
+        "test": "php tests/php/conformance.php"
+    }
+}

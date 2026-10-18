@@ -1,0 +1,449 @@
+{
+  "$comment": "Conformance cases for every kStyleEditor SDK. Each SDK's test runner reads this file and must pass every case. See SPEC.md.",
+  "version": "1.0",
+  "parse": [
+    {
+      "name": "simple declarations",
+      "input": "color: red; padding: 8px 12px;",
+      "expect": [
+        { "property": "color", "value": "red", "important": false },
+        { "property": "padding", "value": "8px 12px", "important": false }
+      ]
+    },
+    {
+      "name": "missing final semicolon",
+      "input": "color: red; margin: 0",
+      "expect": [
+        { "property": "color", "value": "red", "important": false },
+        { "property": "margin", "value": "0", "important": false }
+      ]
+    },
+    {
+      "name": "one declaration per line",
+      "input": "color: #333;\npadding: 4px;\n",
+      "expect": [
+        { "property": "color", "value": "#333", "important": false },
+        { "property": "padding", "value": "4px", "important": false }
+      ]
+    },
+    {
+      "name": "property names are lower-cased, values are not",
+      "input": "COLOR: Red; Font-Family: Georgia",
+      "expect": [
+        { "property": "color", "value": "Red", "important": false },
+        { "property": "font-family", "value": "Georgia", "important": false }
+      ]
+    },
+    {
+      "name": "custom properties keep their case",
+      "input": "--Brand-Colour: #f00",
+      "expect": [
+        { "property": "--Brand-Colour", "value": "#f00", "important": false }
+      ]
+    },
+    {
+      "name": "whitespace is collapsed and trimmed",
+      "input": "  font-family :\t \"Helvetica  Neue\",\n   Arial ;  ",
+      "expect": [
+        { "property": "font-family", "value": "\"Helvetica Neue\", Arial", "important": false }
+      ]
+    },
+    {
+      "name": "important is split off",
+      "input": "color: red !important; margin: 0 ! IMPORTANT; padding: 1px!important",
+      "expect": [
+        { "property": "color", "value": "red", "important": true },
+        { "property": "margin", "value": "0", "important": true },
+        { "property": "padding", "value": "1px", "important": true }
+      ]
+    },
+    {
+      "name": "comments are removed",
+      "input": "/* heading */ color: red; /* a; b: c */ margin: 0/**/",
+      "expect": [
+        { "property": "color", "value": "red", "important": false },
+        { "property": "margin", "value": "0", "important": false }
+      ]
+    },
+    {
+      "name": "unterminated comment runs to the end",
+      "input": "color: red; /* margin: 0",
+      "expect": [
+        { "property": "color", "value": "red", "important": false }
+      ]
+    },
+    {
+      "name": "semicolons inside strings and parentheses do not split",
+      "input": "content: \"a;b\"; background-image: url(data:image/png;base64,AAAA); font-family: 'x;y'",
+      "expect": [
+        { "property": "content", "value": "\"a;b\"", "important": false },
+        { "property": "background-image", "value": "url(data:image/png;base64,AAAA)", "important": false },
+        { "property": "font-family", "value": "'x;y'", "important": false }
+      ]
+    },
+    {
+      "name": "comment markers inside strings are kept",
+      "input": "content: \"/* not a comment */\"",
+      "expect": [
+        { "property": "content", "value": "\"/* not a comment */\"", "important": false }
+      ]
+    },
+    {
+      "name": "escaped quotes inside strings",
+      "input": "content: \"a\\\";b\"; color: red",
+      "expect": [
+        { "property": "content", "value": "\"a\\\";b\"", "important": false },
+        { "property": "color", "value": "red", "important": false }
+      ]
+    },
+    {
+      "name": "colons in values",
+      "input": "background-image: url(https://example.com/a.png)",
+      "expect": [
+        { "property": "background-image", "value": "url(https://example.com/a.png)", "important": false }
+      ]
+    },
+    {
+      "name": "a wrapping rule is unwrapped",
+      "input": ".field input {\n  color: red;\n  margin: 0;\n}",
+      "expect": [
+        { "property": "color", "value": "red", "important": false },
+        { "property": "margin", "value": "0", "important": false }
+      ]
+    },
+    {
+      "name": "only the first rule is read",
+      "input": "a { color: red } b { color: blue }",
+      "expect": [
+        { "property": "color", "value": "red", "important": false }
+      ]
+    },
+    {
+      "name": "an unclosed rule runs to the end",
+      "input": "a { color: red; margin: 0",
+      "expect": [
+        { "property": "color", "value": "red", "important": false },
+        { "property": "margin", "value": "0", "important": false }
+      ]
+    },
+    {
+      "name": "pieces without a colon, name or value are skipped",
+      "input": "colour; : red; color:; ;; margin: 0",
+      "expect": [
+        { "property": "margin", "value": "0", "important": false }
+      ]
+    },
+    {
+      "name": "duplicates are kept in order",
+      "input": "background: red; background: linear-gradient(red, blue)",
+      "expect": [
+        { "property": "background", "value": "red", "important": false },
+        { "property": "background", "value": "linear-gradient(red, blue)", "important": false }
+      ]
+    },
+    {
+      "name": "empty input",
+      "input": "",
+      "expect": []
+    },
+    {
+      "name": "non-ASCII text survives",
+      "input": "content: \"café ✓\"; font-family: \"Noto Sans JP\", 游ゴシック",
+      "expect": [
+        { "property": "content", "value": "\"café ✓\"", "important": false },
+        { "property": "font-family", "value": "\"Noto Sans JP\", 游ゴシック", "important": false }
+      ]
+    }
+  ],
+  "stringify": [
+    {
+      "name": "pretty by default",
+      "input": [
+        { "property": "color", "value": "red", "important": false },
+        { "property": "padding", "value": "8px", "important": true }
+      ],
+      "options": {},
+      "expect": "color: red;\npadding: 8px !important;"
+    },
+    {
+      "name": "compact",
+      "input": [
+        { "property": "color", "value": "red", "important": false },
+        { "property": "padding", "value": "8px", "important": false }
+      ],
+      "options": { "pretty": false },
+      "expect": "color: red; padding: 8px;"
+    },
+    {
+      "name": "pretty with selector",
+      "input": [
+        { "property": "color", "value": "red", "important": false },
+        { "property": "padding", "value": "8px", "important": false }
+      ],
+      "options": { "selector": "#form .name" },
+      "expect": "#form .name {\n  color: red;\n  padding: 8px;\n}"
+    },
+    {
+      "name": "compact with selector",
+      "input": [
+        { "property": "color", "value": "red", "important": false }
+      ],
+      "options": { "selector": ".a > .b", "pretty": false },
+      "expect": ".a > .b { color: red; }"
+    },
+    {
+      "name": "empty list is an empty string, even with a selector",
+      "input": [],
+      "options": { "selector": ".a" },
+      "expect": ""
+    }
+  ],
+  "sanitize": [
+    {
+      "name": "allowed declarations pass through",
+      "input": "color: red; padding: 8px 12px",
+      "options": {},
+      "expect": "color: red;\npadding: 8px 12px;",
+      "rejected": []
+    },
+    {
+      "name": "properties outside the default list are dropped",
+      "input": "color: red; content: \"x\"; -webkit-appearance: none",
+      "options": {},
+      "expect": "color: red;",
+      "rejected": [
+        { "property": "content", "reason": "not-allowed" },
+        { "property": "-webkit-appearance", "reason": "not-allowed" }
+      ]
+    },
+    {
+      "name": "custom allow list",
+      "input": "color: red; padding: 1px; margin: 2px",
+      "options": { "allow": ["color", "margin"] },
+      "expect": "color: red;\nmargin: 2px;",
+      "rejected": [
+        { "property": "padding", "reason": "not-allowed" }
+      ]
+    },
+    {
+      "name": "prefix wildcard",
+      "input": "border-top: 1px solid; border-radius: 4px; color: red",
+      "options": { "allow": ["border-*"] },
+      "expect": "border-top: 1px solid;\nborder-radius: 4px;",
+      "rejected": [
+        { "property": "color", "reason": "not-allowed" }
+      ]
+    },
+    {
+      "name": "allow everything well formed",
+      "input": "content: \"x\"; --brand: #f00; -webkit-appearance: none",
+      "options": { "allow": "*" },
+      "expect": "content: \"x\";\n--brand: #f00;\n-webkit-appearance: none;",
+      "rejected": []
+    },
+    {
+      "name": "malformed property names",
+      "input": "font size: 3px; 9lives: 1; col@r: red; -: 1",
+      "options": { "allow": "*" },
+      "expect": "",
+      "rejected": [
+        { "property": "font size", "reason": "property" },
+        { "property": "9lives", "reason": "property" },
+        { "property": "col@r", "reason": "property" },
+        { "property": "-", "reason": "property" }
+      ]
+    },
+    {
+      "name": "behavior and -moz-binding are always blocked",
+      "input": "behavior: url(x.htc); -moz-binding: url(x.xml#y)",
+      "options": { "allow": "*" },
+      "expect": "",
+      "rejected": [
+        { "property": "behavior", "reason": "blocked" },
+        { "property": "-moz-binding", "reason": "blocked" }
+      ]
+    },
+    {
+      "name": "values that could close the block or open markup",
+      "input": "color: red}; width: 1px<script>; height: 1px>2px; font-family: a\\62 c",
+      "options": {},
+      "expect": "",
+      "rejected": [
+        { "property": "color", "reason": "value" },
+        { "property": "width", "reason": "value" },
+        { "property": "height", "reason": "value" },
+        { "property": "font-family", "reason": "value" }
+      ]
+    },
+    {
+      "name": "unbalanced quotes and parentheses",
+      "input": "font-family: \"Arial; color: rgb(1, 2, 3; width: calc(1px)); margin: 0",
+      "options": {},
+      "expect": "",
+      "rejected": [
+        { "property": "font-family", "reason": "value" }
+      ]
+    },
+    {
+      "name": "a stray closing parenthesis",
+      "input": "width: 1px); margin: 0",
+      "options": {},
+      "expect": "margin: 0;",
+      "rejected": [
+        { "property": "width", "reason": "value" }
+      ]
+    },
+    {
+      "name": "script-bearing values",
+      "input": "width: expression(alert(1)); background-image: url(javascript:alert(1)); background: url( ' JavaScript:x' ); color: VBScript:x",
+      "options": {},
+      "expect": "",
+      "rejected": [
+        { "property": "width", "reason": "value" },
+        { "property": "background-image", "reason": "value" },
+        { "property": "background", "reason": "value" },
+        { "property": "color", "reason": "value" }
+      ]
+    },
+    {
+      "name": "expression with spaces",
+      "input": "width: EXPRESSION (alert(1))",
+      "options": {},
+      "expect": "",
+      "rejected": [
+        { "property": "width", "reason": "value" }
+      ]
+    },
+    {
+      "name": "image functions that take bare URLs",
+      "input": "background-image: image-set(\"a.png\" 1x); background-image: -webkit-image-set(\"a.png\" 1x); background-image: cross-fade(url(a.png), url(b.png))",
+      "options": {},
+      "expect": "",
+      "rejected": [
+        { "property": "background-image", "reason": "value" },
+        { "property": "background-image", "reason": "value" },
+        { "property": "background-image", "reason": "value" }
+      ]
+    },
+    {
+      "name": "safe URLs",
+      "input": "background-image: url(https://example.com/a.png); background-image: url(\"http://example.com/a b.png\"); background-image: url('/img/a.png'); background-image: url(img/a.png); background-image: url(//cdn.example.com/a.png); background-image: url(data:image/png;base64,iVBORw0KGgo=); background-image: url(\"data:image/webp,xyz\")",
+      "options": {},
+      "expect": "background-image: url(https://example.com/a.png);\nbackground-image: url(\"http://example.com/a b.png\");\nbackground-image: url('/img/a.png');\nbackground-image: url(img/a.png);\nbackground-image: url(//cdn.example.com/a.png);\nbackground-image: url(data:image/png;base64,iVBORw0KGgo=);\nbackground-image: url(\"data:image/webp,xyz\");",
+      "rejected": []
+    },
+    {
+      "name": "unsafe URL schemes",
+      "input": "background-image: url(data:image/svg+xml;utf8,x); background-image: url(\"data:text/html,x\"); background-image: url(ftp://example.com/a.png); background-image: url(file:///etc/passwd); background-image: url(data:image/pngx,abc)",
+      "options": {},
+      "expect": "",
+      "rejected": [
+        { "property": "background-image", "reason": "url" },
+        { "property": "background-image", "reason": "url" },
+        { "property": "background-image", "reason": "url" },
+        { "property": "background-image", "reason": "url" },
+        { "property": "background-image", "reason": "url" }
+      ]
+    },
+    {
+      "name": "every url in a value is checked",
+      "input": "background: url(a.png), url(ftp://x/b.png)",
+      "options": {},
+      "expect": "",
+      "rejected": [
+        { "property": "background", "reason": "url" }
+      ]
+    },
+    {
+      "name": "important is preserved",
+      "input": "color: red !important",
+      "options": {},
+      "expect": "color: red !important;",
+      "rejected": []
+    },
+    {
+      "name": "selector and compact output",
+      "input": "color: red; content: 'x'; margin: 0",
+      "options": { "selector": "#f .name", "pretty": false },
+      "expect": "#f .name { color: red; margin: 0; }",
+      "rejected": [
+        { "property": "content", "reason": "not-allowed" }
+      ]
+    },
+    {
+      "name": "an incoming rule is re-wrapped in the caller's selector",
+      "input": "body { color: red }",
+      "options": { "selector": ".mine" },
+      "expect": ".mine {\n  color: red;\n}",
+      "rejected": []
+    },
+    {
+      "name": "text before a brace is read as a selector and discarded",
+      "input": "color: red} body {color: blue; margin: 0}",
+      "options": {},
+      "expect": "color: blue;\nmargin: 0;",
+      "rejected": []
+    },
+    {
+      "name": "nothing left is an empty string",
+      "input": "content: 'x'",
+      "options": { "selector": ".mine" },
+      "expect": "",
+      "rejected": [
+        { "property": "content", "reason": "not-allowed" }
+      ]
+    },
+    {
+      "name": "comments cannot smuggle anything",
+      "input": "color: red/*}*/; margin: 0",
+      "options": {},
+      "expect": "color: red;\nmargin: 0;",
+      "rejected": []
+    },
+    {
+      "name": "newlines in strings are collapsed, so a bad string cannot split a declaration",
+      "input": "font-family: \"x\n; behavior: url(a.htc)\"",
+      "options": {},
+      "expect": "font-family: \"x ; behavior: url(a.htc)\";",
+      "rejected": []
+    }
+  ],
+  "invalidSelectors": [
+    "   ",
+    "a { color: red }",
+    "a}",
+    "a; b",
+    "<style>",
+    "a\\62",
+    "a /* x */",
+    "a\u0000b"
+  ],
+  "defaultAllow": [
+    "color",
+    "font", "font-family", "font-size", "font-weight", "font-style", "font-variant",
+    "background", "background-color", "background-image", "background-size",
+    "background-position", "background-repeat", "background-attachment",
+    "padding", "padding-top", "padding-right", "padding-bottom", "padding-left",
+    "margin", "margin-top", "margin-right", "margin-bottom", "margin-left",
+    "line-height", "letter-spacing", "word-spacing", "text-align", "text-transform",
+    "text-decoration", "text-decoration-line", "text-decoration-style",
+    "text-decoration-color", "text-decoration-thickness", "text-underline-offset",
+    "text-shadow", "text-indent", "white-space", "word-break", "overflow-wrap",
+    "vertical-align",
+    "border", "border-top", "border-right", "border-bottom", "border-left",
+    "border-width", "border-style", "border-color",
+    "border-radius", "border-top-left-radius", "border-top-right-radius",
+    "border-bottom-right-radius", "border-bottom-left-radius",
+    "outline", "outline-width", "outline-style", "outline-color", "outline-offset",
+    "width", "height", "min-width", "max-width", "min-height", "max-height",
+    "box-sizing", "aspect-ratio",
+    "display", "overflow", "overflow-x", "overflow-y", "float", "clear", "visibility",
+    "flex-direction", "flex-wrap", "justify-content", "align-items", "align-content",
+    "gap", "row-gap", "column-gap", "flex", "flex-grow", "flex-shrink", "flex-basis",
+    "align-self", "order", "grid-template-columns", "grid-template-rows",
+    "position", "inset", "top", "right", "bottom", "left", "z-index",
+    "opacity", "box-shadow", "transform", "filter", "mix-blend-mode", "transition",
+    "cursor", "pointer-events", "user-select",
+    "list-style", "list-style-type", "list-style-position"
+  ]
+}

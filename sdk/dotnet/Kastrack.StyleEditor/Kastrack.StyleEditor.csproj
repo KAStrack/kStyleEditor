@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <PackageId>Kastrack.StyleEditor</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>KAStrack</Authors>
+    <Description>Server-side sanitiser for the CSS that kStyleEditor writes: parse, allow-list and re-serialise untrusted CSS declarations.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://kastrack.github.io/kStyleEditor/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/KAStrack/kStyleEditor</RepositoryUrl>
+    <PackageTags>css;sanitize;sanitizer;style-editor;security</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

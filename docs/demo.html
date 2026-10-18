@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playground — kStyleEditor</title>
+<meta name="description" content="Try every kStyleEditor option and see the CSS it saves and the attach() call that produces it.">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="dist/k-style-editor.min.css">
+</head>
+<body class="docs-wide">
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.0</span></a>
+    <nav class="site-nav">
+      <a href="./">Home</a>
+      <a href="demo.html" aria-current="page">Playground</a>
+      <a href="docs.html">Docs</a>
+      <a href="https://github.com/KAStrack/kStyleEditor">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero" style="padding-bottom:12px">
+    <h1>Playground</h1>
+    <p class="lede">Change any option on the left. The editor is rebuilt around the same CSS, and the call that builds it is written out underneath.</p>
+  </div>
+
+  <div class="playground">
+    <form class="config" id="config" onsubmit="return false" aria-label="Editor options">
+      <fieldset>
+        <legend>Basic controls</legend>
+        <div class="ctl-list" id="basic-list"></div>
+        <div class="ctl-actions">
+          <button type="button" data-list="basic" data-set="defaults">Defaults</button>
+          <button type="button" data-list="basic" data-set="all">All</button>
+          <button type="button" data-list="basic" data-set="none">None</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Advanced controls</legend>
+        <div class="ctl-list" id="advanced-list"></div>
+        <div class="ctl-actions">
+          <button type="button" data-list="advanced" data-set="defaults">Defaults</button>
+          <button type="button" data-list="advanced" data-set="all">All</button>
+          <button type="button" data-list="advanced" data-set="none">None</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Output</legend>
+        <label class="field-label" for="opt-selector">Selector</label>
+        <input type="text" id="opt-selector" placeholder="none: bare declarations" autocomplete="off">
+        <label class="opt"><input type="checkbox" id="opt-pretty" checked> One declaration per line</label>
+        <label class="opt"><input type="checkbox" id="opt-strict"> Strict (only editable properties)</label>
+        <label class="opt"><input type="checkbox" id="opt-sanitize"> Sanitise (drop what the SDK would)</label>
+      </fieldset>
+      <fieldset>
+        <legend>Display</legend>
+        <label class="field-label" for="opt-preview">Preview</label>
+        <select id="opt-preview">
+          <option value="element">Style the element above</option>
+          <option value="builtin">Built-in preview box</option>
+          <option value="none">No preview</option>
+        </select>
+        <label class="field-label" for="opt-theme" style="margin-top:10px">Theme</label>
+        <select id="opt-theme">
+          <option value="">Follow the page</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+        <label class="field-label" for="opt-tab" style="margin-top:10px">Start tab</label>
+        <select id="opt-tab">
+          <option value="basic">Basic</option>
+          <option value="advanced">Advanced</option>
+          <option value="code">Code</option>
+        </select>
+        <label class="opt" style="margin-top:10px"><input type="checkbox" id="opt-code" checked> Code tab</label>
+        <label class="opt"><input type="checkbox" id="opt-swatches"> Brand palette instead of the default</label>
+        <label class="opt"><input type="checkbox" id="opt-hide" checked> Hide the textarea</label>
+        <label class="opt"><input type="checkbox" id="opt-readonly"> Read-only</label>
+      </fieldset>
+    </form>
+
+    <div>
+      <div class="stage pg-target-wrap" id="target-wrap">
+        <div id="pg-target" style="background:var(--page-bg)">
+          <strong>Preview element</strong><br>
+          This is an ordinary element on the page, restyled live by the editor.
+        </div>
+      </div>
+
+      <textarea id="pg-css" class="data-input" aria-label="Saved CSS">color: #1f2937;
+font-family: Georgia, "Times New Roman", serif;
+background-color: #fef9c3;
+padding: 16px 20px;
+border: 2px dashed #ca8a04;
+border-radius: 10px;
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);</textarea>
+
+      <div class="grid-2" style="margin-top:20px">
+        <div>
+          <label class="field-label" for="pg-out">Saved to the textarea</label>
+          <pre class="output" id="pg-out" tabindex="0"></pre>
+        </div>
+        <div>
+          <label class="field-label" for="pg-call">The call</label>
+          <pre class="output" id="pg-call" tabindex="0"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    kStyleEditor 0.1.0 — MIT licensed.
+    <a href="https://github.com/KAStrack/kStyleEditor">Source on GitHub</a>.
+  </div>
+</footer>
+
+<script src="dist/k-style-css.min.js"></script>
+<script src="dist/k-style-editor.min.js"></script>
+<script>
+  (function () {
+    var all = KStyleEditor.controls();
+    var defaults = { basic: KStyleEditor.DEFAULT_BASIC, advanced: KStyleEditor.DEFAULT_ADVANCED };
+    var SWATCHES = [['#111827', 'Ink'], ['#ffffff', 'Paper'], ['#2563eb', 'Brand blue'], ['#16a34a', 'Go green'],
+      ['#ca8a04', 'Gold'], ['#dc2626', 'Alert red'], ['transparent', 'None']];
+    var $ = function (id) { return document.getElementById(id); };
+    var editor = null;
+
+    function buildList(name) {
+      var box = $(name + '-list');
+      all.forEach(function (c) {
+        var label = document.createElement('label');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = c.id;
+        cb.checked = defaults[name].indexOf(c.id) !== -1;
+        // A control lives in one group or the other, not both.
+        cb.addEventListener('change', function () {
+          if (!cb.checked) return;
+          var other = $((name === 'basic' ? 'advanced' : 'basic') + '-list').querySelector('input[value="' + c.id + '"]');
+          if (other) other.checked = false;
+        });
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' ' + c.label));
+        label.title = c.id;
+        box.appendChild(label);
+      });
+    }
+
+    function checked(name) {
+      var ids = [];
+      Array.prototype.forEach.call($(name + '-list').querySelectorAll('input:checked'), function (cb) { ids.push(cb.value); });
+      return ids;
+    }
+
+    // Same controls, whatever the order: the lists are in registry order.
+    function sameList(a, b) { return a.length === b.length && a.every(function (x) { return b.indexOf(x) !== -1; }); }
+
+    function options() {
+      var o = {};
+      var basic = checked('basic');
+      var advanced = checked('advanced');
+      if (!sameList(basic, defaults.basic)) o.basic = basic;
+      if (!advanced.length) o.advanced = false;
+      else if (!sameList(advanced, defaults.advanced)) o.advanced = advanced;
+      if ($('opt-selector').value.trim()) o.selector = $('opt-selector').value.trim();
+      if (!$('opt-pretty').checked) o.pretty = false;
+      if ($('opt-strict').checked) o.strict = true;
+      if ($('opt-sanitize').checked) o.sanitize = true;
+      var p = $('opt-preview').value;
+      if (p === 'element') o.preview = '#pg-target';
+      else if (p === 'builtin') o.preview = true;
+      if ($('opt-theme').value) o.theme = $('opt-theme').value;
+      if ($('opt-tab').value !== 'basic') o.startTab = $('opt-tab').value;
+      if (!$('opt-code').checked) o.code = false;
+      if ($('opt-swatches').checked) o.swatches = SWATCHES;
+      if (!$('opt-hide').checked) o.hideTextarea = false;
+      if ($('opt-readonly').checked) o.readOnly = true;
+      return o;
+    }
+
+    function describe(o) {
+      var body = JSON.stringify(o, null, 2)
+        .replace(/"([a-zA-Z]+)":/g, '$1:')
+        .replace(/"/g, '\'');
+      return 'KStyleEditor.attach(\'#css\'' + (body === '{}' ? '' : ', ' + body) + ');';
+    }
+
+    function show() {
+      $('pg-out').textContent = $('pg-css').value || '(empty)';
+    }
+
+    function rebuild() {
+      if (editor) editor.destroy();
+      var o = options();
+      $('target-wrap').hidden = o.preview !== '#pg-target';
+      $('pg-call').textContent = describe(o);
+      o.onChange = show;
+      editor = KStyleEditor.attach('#pg-css', o);
+      show();
+    }
+
+    buildList('basic');
+    buildList('advanced');
+
+    $('config').addEventListener('change', rebuild);
+    $('opt-selector').addEventListener('input', function () {
+      clearTimeout(this._t);
+      this._t = setTimeout(rebuild, 300);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.ctl-actions button'), function (b) {
+      b.addEventListener('click', function () {
+        var name = b.getAttribute('data-list');
+        var mode = b.getAttribute('data-set');
+        Array.prototype.forEach.call($(name + '-list').querySelectorAll('input'), function (cb) {
+          cb.checked = mode === 'all' || (mode === 'defaults' && defaults[name].indexOf(cb.value) !== -1);
+        });
+        rebuild();
+      });
+    });
+
+    rebuild();
+  }());
+</script>
+</body>
+</html>

@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation — kStyleEditor</title>
+<meta name="description" content="kStyleEditor reference: installation, options, controls, methods, events, theming, and the server-side sanitiser SDKs.">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="dist/k-style-editor.min.css">
+</head>
+<body class="docs-page">
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.0</span></a>
+    <nav class="site-nav">
+      <a href="./">Home</a>
+      <a href="demo.html">Playground</a>
+      <a href="docs.html" aria-current="page">Docs</a>
+      <a href="https://github.com/KAStrack/kStyleEditor">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap docs-layout">
+
+  <nav class="toc" aria-label="On this page">
+    <strong class="toc-title">On this page</strong>
+    <ul>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#quick-start">Quick start</a></li>
+      <li><a href="#format">What gets saved</a></li>
+      <li><a href="#options">Options</a></li>
+      <li><a href="#controls">Controls</a></li>
+      <li><a href="#custom-controls">Custom controls</a></li>
+      <li><a href="#preview">Preview</a></li>
+      <li><a href="#methods">Methods</a></li>
+      <li><a href="#events">Events</a></li>
+      <li><a href="#theming">Theming</a></li>
+      <li><a href="#labels">Labels and translation</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#sdks">Server SDKs</a></li>
+      <li><a href="#browsers">Browser support</a></li>
+    </ul>
+  </nav>
+
+  <main class="docs-main">
+
+  <section id="install">
+    <h2>Install</h2>
+    <h3>Download</h3>
+    <p>
+      Copy the files from <a href="https://github.com/KAStrack/kStyleEditor/tree/main/docs/dist"><code>docs/dist/</code></a>
+      on GitHub, or build them yourself with <code>npm run build</code>. There is no build step to use them.
+    </p>
+<pre><code>&lt;link rel="stylesheet" href="k-style-editor.min.css"&gt;
+&lt;script src="k-style-css.min.js"&gt;&lt;/script&gt;
+&lt;script src="k-style-editor.min.js"&gt;&lt;/script&gt;</code></pre>
+    <p>Or the two-file bundle, <code>k-style.min.js</code> and <code>k-style.min.css</code>, which carries both scripts.</p>
+
+    <table>
+      <thead><tr><th>File</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>k-style-css.min.js</code></td><td>The parser and sanitiser (<code>KStyleCss</code>). The editor needs it; it is also the JavaScript SDK.</td></tr>
+        <tr><td><code>k-style-editor.min.js</code></td><td>The editor (<code>KStyleEditor</code>). Load it after <code>k-style-css</code>.</td></tr>
+        <tr><td><code>k-style-editor.min.css</code></td><td>The editor's stylesheet.</td></tr>
+        <tr><td><code>k-style.min.js</code> / <code>.css</code></td><td>Both scripts in one file, and the stylesheet under the same name.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>npm</h3>
+<pre><code>npm install @kastrack/style-editor</code></pre>
+<pre><code>import '@kastrack/style-editor/editor.css';
+import KStyleEditor from '@kastrack/style-editor/editor';   // the editor
+import KStyleCss from '@kastrack/style-editor';             // the sanitiser, also in Node</code></pre>
+  </section>
+
+  <section id="quick-start">
+    <h2>Quick start</h2>
+<pre><code>&lt;form method="post"&gt;
+  &lt;textarea name="field_css" id="field-css"&gt;color: #333;&lt;/textarea&gt;
+  &lt;button&gt;Save&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;script&gt;
+  KStyleEditor.attach('#field-css', { preview: true });
+&lt;/script&gt;</code></pre>
+    <p>
+      The textarea is hidden and the editor appears after it. Every change is written straight back into
+      the textarea (with native <code>input</code> and <code>change</code> events), so the form posts as it always did.
+      An editor that has not been touched does not rewrite the textarea, so attaching never changes what is saved.
+    </p>
+    <div id="qs-demo">
+      <textarea id="qs-css">color: #333;</textarea>
+    </div>
+  </section>
+
+  <section id="format">
+    <h2>What gets saved</h2>
+    <p>Plain CSS declarations, one per line, with no selector or braces:</p>
+<pre><code>color: #1d4ed8;
+padding: 8px 12px;
+border: 1px solid #94a3b8;</code></pre>
+    <p>With <code>selector: '#signup .email'</code> the textarea holds a whole rule instead:</p>
+<pre><code>#signup .email {
+  color: #1d4ed8;
+  padding: 8px 12px;
+}</code></pre>
+    <p>
+      Reading is forgiving: either form loads, comments are dropped, the final semicolon is optional, and
+      <code>!important</code> is kept. Declarations no control understands (a <code>content</code>, a vendor prefix,
+      a second <code>background</code>) are kept exactly where they were, shown in the Code tab, and saved unchanged,
+      unless you ask for <code>strict</code>. A control writes its properties back in the place the first of
+      them stood, so the cascade between them and anything else does not change.
+    </p>
+    <p>The full grammar is in <a href="https://github.com/KAStrack/kStyleEditor/blob/main/SPEC.md">SPEC.md</a>.</p>
+  </section>
+
+  <section id="options">
+    <h2>Options</h2>
+    <p>All optional. Pass them as the second argument to <code>attach()</code>.</p>
+    <table>
+      <thead><tr><th>Option</th><th>Default</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>basic</code></td><td>see <a href="#controls">Controls</a></td><td>Control ids for the Basic tab, in order. An array or a comma-separated string. Empty removes the tab.</td></tr>
+        <tr><td><code>advanced</code></td><td>see <a href="#controls">Controls</a></td><td>Control ids for the Advanced tab, shown in sections with a filter box. <code>false</code> removes the tab.</td></tr>
+        <tr><td><code>controls</code></td><td><code>null</code></td><td>Extra controls for this editor: <code>{ id: definition }</code> or an array of definitions. See <a href="#custom-controls">Custom controls</a>.</td></tr>
+        <tr><td><code>selector</code></td><td><code>null</code></td><td>Save <code>selector { … }</code> instead of bare declarations.</td></tr>
+        <tr><td><code>pretty</code></td><td><code>true</code></td><td>One declaration per line. <code>false</code> saves them on one line.</td></tr>
+        <tr><td><code>strict</code></td><td><code>false</code></td><td>Save only properties the enabled controls can edit. Anything else typed in Code is listed there as left out.</td></tr>
+        <tr><td><code>sanitize</code></td><td><code>false</code></td><td>Also drop whatever <code>KStyleCss.sanitize()</code> would, using <code>allow</code>. Your server should still sanitise.</td></tr>
+        <tr><td><code>allow</code></td><td><code>null</code></td><td>The allow-list the Code tab warns against (and <code>sanitize</code> enforces): <code>null</code> for the default list, an array, <code>'*'</code>, or <code>false</code> for no warnings.</td></tr>
+        <tr><td><code>preview</code></td><td><code>false</code></td><td><code>true</code> adds a preview box to the editor. An element or selector restyles that element live. See <a href="#preview">Preview</a>.</td></tr>
+        <tr><td><code>previewContent</code></td><td>a pangram</td><td>What the built-in preview box holds: a string (shown as text) or a DOM node.</td></tr>
+        <tr><td><code>code</code></td><td><code>true</code></td><td>Show the Code tab, where the CSS can be read and typed directly.</td></tr>
+        <tr><td><code>startTab</code></td><td><code>'basic'</code></td><td><code>'basic'</code>, <code>'advanced'</code> or <code>'code'</code>.</td></tr>
+        <tr><td><code>hideTextarea</code></td><td><code>true</code></td><td>Hide the original textarea.</td></tr>
+        <tr><td><code>units</code></td><td><code>['px','em','rem','%']</code></td><td>Units for length fields that do not name their own.</td></tr>
+        <tr><td><code>fonts</code></td><td>five stacks</td><td>Font stacks for the Font control: strings, or <code>{ label, value }</code>. Any other family can still be typed via <em>Custom…</em>.</td></tr>
+        <tr><td><code>swatches</code></td><td><code>null</code></td><td>The palette each colour field opens. Colours as strings, or <code>[value, label]</code> pairs so each has a name people hear and see on hover. <code>null</code> gives 24 built-in colours (neutrals, strong colours and light tints); <code>false</code> leaves only <em>Custom colour…</em>.</td></tr>
+        <tr><td><code>openSetSections</code></td><td><code>true</code></td><td>Open the Advanced sections that already hold a value.</td></tr>
+        <tr><td><code>theme</code></td><td><code>null</code></td><td><code>null</code> follows <code>prefers-color-scheme</code>; <code>'light'</code> or <code>'dark'</code> pins it.</td></tr>
+        <tr><td><code>readOnly</code></td><td><code>false</code></td><td>Show everything, change nothing.</td></tr>
+        <tr><td><code>labels</code></td><td><code>null</code></td><td>Override any interface text. See <a href="#labels">Labels</a>.</td></tr>
+        <tr><td><code>onChange</code></td><td><code>null</code></td><td><code>function (css, payload)</code>, called after every change. Same as <code>on('change')</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Data attributes</h3>
+    <p><code>KStyleEditor.attachAll(selector, options)</code> attaches to every match (default <code>textarea[data-k-style]</code>) and reads these:</p>
+    <table>
+      <thead><tr><th>Attribute</th><th>Option</th></tr></thead>
+      <tbody>
+        <tr><td><code>data-k-style-basic="color,font"</code></td><td><code>basic</code></td></tr>
+        <tr><td><code>data-k-style-advanced="false"</code> or a list</td><td><code>advanced</code></td></tr>
+        <tr><td><code>data-k-style-selector=".x"</code></td><td><code>selector</code></td></tr>
+        <tr><td><code>data-k-style-preview="true"</code> or a selector</td><td><code>preview</code></td></tr>
+        <tr><td><code>data-k-style-theme="dark"</code></td><td><code>theme</code></td></tr>
+        <tr><td><code>data-k-style-strict</code></td><td><code>strict</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="controls">
+    <h2>Controls</h2>
+    <p>
+      A control is one titled row. Any control can go in either group, in any order. The defaults are:
+    </p>
+    <h3>Basic</h3>
+    <p><code id="default-basic"></code></p>
+    <h3>Advanced</h3>
+    <p><code id="default-advanced"></code></p>
+    <p>
+      The Advanced tab groups them into sections (Typography, Background, Border, Size, Layout,
+      Flex &amp; grid, Position, Effects, Interaction, and Spacing if you move padding or margin there)
+      and adds a filter box.
+    </p>
+    <h3>Every built-in control</h3>
+    <p>Generated from the library on this page, so it is always current.</p>
+    <table id="control-table">
+      <thead><tr><th>Id</th><th>Title</th><th>Section</th><th>Properties</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="note">
+      When a value is something a control cannot take apart (a <code>calc()</code>, two shadows, a gradient
+      with stops), the control shows it as a dashed text box instead. Nothing is rewritten until you change it.
+    </p>
+  </section>
+
+  <section id="custom-controls">
+    <h2>Custom controls</h2>
+    <p>
+      A control is a title, a section, and a list of fields. Each field edits one CSS property using one of
+      the built-in field types. Pass definitions in <code>controls</code> for one editor, or register them for every editor:
+    </p>
+<pre><code>KStyleEditor.registerControl({
+  id: 'accent',
+  label: 'Accent colour',
+  section: 'typography',               // where it sits on the Advanced tab
+  fields: [
+    { type: 'color', prop: '--accent' }
+  ]
+});
+
+KStyleEditor.attach('#css', { basic: ['accent', 'color', 'padding'] });</code></pre>
+
+    <h3>Field types</h3>
+    <table>
+      <thead><tr><th>type</th><th>Edits</th><th>Extra keys</th></tr></thead>
+      <tbody>
+        <tr><td><code>color</code></td><td>Any colour: a palette, the system picker, or typed text</td><td></td></tr>
+        <tr><td><code>length</code></td><td>Number + unit, or a keyword</td><td><code>units</code> (<code>''</code> for unitless), <code>keywords</code>, <code>step</code></td></tr>
+        <tr><td><code>select</code></td><td>One of a list</td><td><code>options</code>: strings or <code>[value, label]</code>; <code>custom: true</code> adds <em>Custom…</em></td></tr>
+        <tr><td><code>font</code></td><td>A font stack from <code>fonts</code></td><td><code>fonts</code></td></tr>
+        <tr><td><code>text</code></td><td>Free text</td><td><code>suggestions</code>, <code>placeholder</code></td></tr>
+        <tr><td><code>range</code></td><td>A number on a slider</td><td><code>min</code>, <code>max</code>, <code>step</code></td></tr>
+        <tr><td><code>box</code></td><td>Four sides (or corners) of a shorthand, linked or not</td><td><code>keywords</code>, <code>units</code>, <code>corners</code>, <code>shorthand: false</code></td></tr>
+        <tr><td><code>stroke</code></td><td>Width, style and colour of <code>border</code>/<code>outline</code></td><td><code>sides: true</code> for per-side editing</td></tr>
+        <tr><td><code>shadow</code></td><td>One shadow</td><td><code>spread: false</code>, <code>inset: false</code></td></tr>
+        <tr><td><code>functions</code></td><td>A list of one-argument functions, as in <code>transform</code></td><td><code>functions: [{ name, label, units }]</code></td></tr>
+        <tr><td><code>image</code></td><td>Image URL or a two-colour gradient</td><td></td></tr>
+      </tbody>
+    </table>
+    <p>
+      Every field also takes <code>label</code> (a small title above it, needed when a control has more
+      than one field) and <code>key</code> (its name for <a href="#labels">labels</a>, default the property).
+    </p>
+    <h3>A new field type</h3>
+    <p>
+      <code>KStyleEditor.registerFieldType(name, factory)</code> adds one. The factory gets
+      <code>(spec, ctx)</code> and returns <code>{ el, props, refresh() }</code>: <code>props</code> lists the
+      properties it owns, <code>ctx.get(prop)</code> reads a value, and <code>ctx.commit(props, declarations)</code>
+      replaces the owned properties. Look at <code>FIELD_TYPES.text</code> in the source for a short one.
+    </p>
+  </section>
+
+  <section id="preview">
+    <h2>Preview</h2>
+    <h3>Built-in box</h3>
+<pre><code>KStyleEditor.attach('#css', { preview: true, previewContent: 'Sign up' });</code></pre>
+    <h3>A real element</h3>
+<pre><code>KStyleEditor.attach('#css', { preview: '#field-12 input' });</code></pre>
+    <p>
+      The element's own <code>style</code> attribute is remembered. Each change puts it back and applies the
+      saved declarations on top as inline styles, so removing something in the editor really removes it,
+      and <code>destroy()</code> (or <code>setPreview()</code> to another element) leaves it as it was found.
+      If your own code changes the element's inline style while an editor is attached, the editor will put
+      back the version it remembered.
+    </p>
+  </section>
+
+  <section id="methods">
+    <h2>Methods</h2>
+    <h3>Static</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Returns</th></tr></thead>
+      <tbody>
+        <tr><td><code>KStyleEditor.attach(textarea, options)</code></td><td>An editor. <code>textarea</code> is an element or a selector. Attaching again to the same textarea replaces the old editor.</td></tr>
+        <tr><td><code>KStyleEditor.attachAll(selector?, options?)</code></td><td>An array of editors. See <a href="#options">data attributes</a>.</td></tr>
+        <tr><td><code>KStyleEditor.get(textarea)</code></td><td>The textarea's editor, or <code>null</code>. Also <code>textarea.kStyleEditor</code>.</td></tr>
+        <tr><td><code>KStyleEditor.detach(textarea)</code></td><td>Destroys the textarea's editor, if it has one.</td></tr>
+        <tr><td><code>KStyleEditor.registerControl(def)</code></td><td>Adds or replaces a control for every editor.</td></tr>
+        <tr><td><code>KStyleEditor.registerFieldType(name, factory)</code></td><td>Adds a field type.</td></tr>
+        <tr><td><code>KStyleEditor.controls()</code></td><td>Every registered control definition.</td></tr>
+        <tr><td><code>KStyleEditor.css</code></td><td>The <code>KStyleCss</code> module.</td></tr>
+      </tbody>
+    </table>
+    <p>Also <code>VERSION</code>, <code>DEFAULT_BASIC</code>, <code>DEFAULT_ADVANCED</code>, <code>DEFAULT_LABELS</code>, <code>DEFAULTS</code> and <code>SECTIONS</code>.</p>
+
+    <h3>Instance</h3>
+    <p>Setters return the editor, so they chain.</p>
+    <table>
+      <thead><tr><th>Method</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>getCss()</code></td><td>The CSS as saved to the textarea.</td></tr>
+        <tr><td><code>getDeclarations()</code></td><td>The saved declarations as <code>[{ property, value, important }]</code>.</td></tr>
+        <tr><td><code>setCss(css)</code></td><td>Replace everything. Accepts declarations or one rule.</td></tr>
+        <tr><td><code>get(property)</code></td><td>One property's value, or <code>''</code>.</td></tr>
+        <tr><td><code>set(property, value, important?)</code></td><td>Set one property; <code>''</code> removes it.</td></tr>
+        <tr><td><code>clear()</code></td><td>Remove every declaration.</td></tr>
+        <tr><td><code>sync()</code></td><td>Re-read the textarea after something else changed it.</td></tr>
+        <tr><td><code>setTab(name)</code> / <code>getTab()</code></td><td><code>'basic'</code>, <code>'advanced'</code> or <code>'code'</code>.</td></tr>
+        <tr><td><code>setPreview(target)</code></td><td>Move the live preview to another element, or <code>false</code> to stop.</td></tr>
+        <tr><td><code>setSelector(selector)</code></td><td>Change the wrapping selector (or <code>null</code>) and re-save.</td></tr>
+        <tr><td><code>setTheme(theme)</code></td><td><code>'light'</code>, <code>'dark'</code> or <code>null</code>.</td></tr>
+        <tr><td><code>on(event, fn)</code> / <code>off(event, fn?)</code></td><td>See <a href="#events">Events</a>.</td></tr>
+        <tr><td><code>destroy()</code></td><td>Remove the editor, show the textarea, restore the preview element. Safe to call twice.</td></tr>
+      </tbody>
+    </table>
+    <p>The editor's outer element is <code>editor.root</code>, and the textarea is <code>editor.textarea</code>.</p>
+  </section>
+
+  <section id="events">
+    <h2>Events</h2>
+<pre><code>editor.on('change', function (css, payload) {
+  // payload: { css, declarations, source }
+  // source: 'control', 'code' or 'api'
+});
+
+editor.on('tab', function (name) { … });</code></pre>
+    <p>
+      The textarea also gets native <code>input</code> and <code>change</code> events on every change, so
+      existing form code (dirty-checking, autosave) works unchanged. An error thrown by a listener is
+      reported to the console and does not stop the others.
+    </p>
+  </section>
+
+  <section id="theming">
+    <h2>Theming</h2>
+    <p>Every colour and size is a custom property on <code>.kse</code>. Override any of them:</p>
+<pre><code>.kse {
+  --kse-accent: #0f766e;
+  --kse-radius: 4px;
+  --kse-font: "Inter", sans-serif;
+  --kse-label-width: 110px;
+}</code></pre>
+    <table>
+      <thead><tr><th>Property</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td><code>--kse-bg</code>, <code>--kse-fg</code>, <code>--kse-muted</code></td><td>Background, text, secondary text</td></tr>
+        <tr><td><code>--kse-border</code>, <code>--kse-sunken</code></td><td>Dividers; tab bar and section headers</td></tr>
+        <tr><td><code>--kse-input-bg</code>, <code>--kse-input-border</code></td><td>Inputs and selects</td></tr>
+        <tr><td><code>--kse-accent</code>, <code>--kse-accent-fg</code>, <code>--kse-accent-soft</code></td><td>Selected tab, set markers, counts, pressed buttons</td></tr>
+        <tr><td><code>--kse-focus</code></td><td>Focus ring</td></tr>
+        <tr><td><code>--kse-warn</code>, <code>--kse-warn-bg</code></td><td>The Code tab's notes</td></tr>
+        <tr><td><code>--kse-check-a</code>, <code>--kse-check-b</code></td><td>The transparency checkerboard</td></tr>
+        <tr><td><code>--kse-radius</code>, <code>--kse-radius-sm</code></td><td>Corner radius of the editor and of inputs</td></tr>
+        <tr><td><code>--kse-font</code>, <code>--kse-font-size</code>, <code>--kse-mono</code></td><td>Type</td></tr>
+        <tr><td><code>--kse-label-width</code>, <code>--kse-control-h</code></td><td>Width of the title column; height of inputs</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Dark values apply automatically under <code>prefers-color-scheme: dark</code>, and always under
+      <code>[data-kse-theme="dark"]</code> (set by the <code>theme</code> option). To theme dark mode, override
+      inside both.
+    </p>
+  </section>
+
+  <section id="labels">
+    <h2>Labels and translation</h2>
+    <p>
+      Every interface string is in <code>KStyleEditor.DEFAULT_LABELS</code>; override any of them. Control
+      titles go in <code>controls</code>, keyed by control id, and field titles by <code>id.key</code>
+      (the field's <code>key</code>, or its property). Section names go in <code>sections</code>:
+    </p>
+<pre><code>KStyleEditor.attach('#css', {
+  labels: {
+    basic: 'Simple', advanced: 'Everything', code: 'CSS',
+    controls: {
+      color: 'Text colour',
+      'font.size': 'Text size'
+    },
+    sections: { flex: 'Flexbox and grid' }
+  }
+});</code></pre>
+  </section>
+
+  <section id="security">
+    <h2>Security</h2>
+    <p>
+      The CSS arrives from a browser, so whatever a user can type into the Code tab (or post by hand) can reach
+      your server. <strong>Sanitise it on the server, every time you render it.</strong> The editor's own
+      <code>sanitize</code> option is a convenience, not a defence.
+    </p>
+    <p><code>sanitize()</code>, in every SDK, keeps a declaration only if all of these hold:</p>
+    <ul>
+      <li>The property is a well-formed name (<code>color</code>, <code>-webkit-x</code>, <code>--custom</code>) and is on the allow-list. The default list is every property the built-in controls write plus common shorthands; pass your own, use <code>'border-*'</code> for a prefix, or <code>'*'</code> for any.</li>
+      <li>It is not <code>behavior</code> or <code>-moz-binding</code>, which are refused whatever the list says.</li>
+      <li>The value has no <code>{ } &lt; &gt; \</code> or control characters, its quotes and parentheses balance, and it contains none of <code>expression(</code>, <code>javascript:</code>, <code>vbscript:</code>, <code>@import</code>, <code>image-set(</code>, <code>image(</code>, <code>element(</code>, <code>cross-fade(</code> or <code>src(</code>, ignoring case and spaces.</li>
+      <li>Every <code>url()</code> is relative, <code>http(s):</code>, or a <code>data:image/png|gif|jpeg|webp</code> URI. SVG data URIs are refused.</li>
+    </ul>
+    <p>
+      The result is re-serialised from what was parsed, never passed through, so it is safe inside a
+      <code>&lt;style&gt;</code> element or a <code>style=""</code> attribute (HTML-escape it for the attribute, as you would any text).
+      The selector you pass is yours, not the user's; one containing <code>{ } &lt; ;</code>, a backslash or a
+      comment is refused with an error.
+    </p>
+    <p class="note">
+      Safe is not the same as harmless. Allowed CSS can still hide an element, cover the page with
+      <code>position: fixed</code>, or load an image from another server (which tells that server someone
+      viewed the page). If that matters, narrow the allow-list: drop <code>position</code>, <code>z-index</code>
+      and the <code>background-image</code> family, for example.
+    </p>
+  </section>
+
+  <section id="sdks">
+    <h2>Server SDKs</h2>
+    <p>
+      Six implementations of the same four functions, held to one shared set of
+      <a href="https://github.com/KAStrack/kStyleEditor/blob/main/tests/fixtures/cases.json">conformance cases</a>:
+    </p>
+    <table>
+      <thead><tr><th>Function</th><th>Does</th></tr></thead>
+      <tbody>
+        <tr><td><code>parse(css)</code></td><td>Declarations, in order, as <code>{ property, value, important }</code>. Never fails; never validates.</td></tr>
+        <tr><td><code>stringify(declarations, options)</code></td><td>Writes them out; <code>selector</code> and <code>pretty</code> as in the editor.</td></tr>
+        <tr><td><code>clean(css, options)</code></td><td><code>{ declarations, rejected }</code>; each rejection has a <code>reason</code>: <code>property</code>, <code>blocked</code>, <code>not-allowed</code>, <code>value</code> or <code>url</code>.</td></tr>
+        <tr><td><code>sanitize(css, options)</code></td><td><code>stringify(clean(css).declarations)</code>: untrusted CSS in, safe CSS out.</td></tr>
+      </tbody>
+    </table>
+    <p>Options are <code>allow</code>, <code>selector</code> and <code>pretty</code>, spelled the way each language spells things.</p>
+
+    <h3>JavaScript / Node</h3>
+<pre><code>const KStyleCss = require('@kastrack/style-editor');   // or window.KStyleCss in a browser
+
+const css = KStyleCss.sanitize(row.css, { selector: '#field-12' });
+const { declarations, rejected } = KStyleCss.clean(row.css, { allow: ['color', 'border-*'] });</code></pre>
+
+    <h3>PHP</h3>
+    <p>PHP 8.1+, no dependencies. <code>composer require kastrack/style-editor</code>, or <code>require 'sdk/php/autoload.php'</code>.</p>
+<pre><code>use Kastrack\StyleEditor\Css;
+
+echo '&lt;style&gt;' . Css::sanitize($row['css'], ['selector' =&gt; '#field-12']) . '&lt;/style&gt;';
+
+$result = Css::clean($row['css'], ['allow' =&gt; ['color', 'border-*']]);
+// $result['declarations'], $result['rejected']</code></pre>
+
+    <h3>Python</h3>
+    <p>Python 3.8+, standard library only. The package is in <code>sdk/python</code>.</p>
+<pre><code>import kstyle_editor
+
+css = kstyle_editor.sanitize(row.css, selector="#field-12")
+result = kstyle_editor.clean(row.css, allow=["color", "border-*"])
+# result["declarations"], result["rejected"]</code></pre>
+
+    <h3>C# / .NET</h3>
+    <p>.NET 8+, no dependencies. The project is in <code>sdk/dotnet</code>.</p>
+<pre><code>using Kastrack.StyleEditor;
+
+var css = KStyleCss.Sanitize(row.Css, new StyleOptions { Selector = "#field-12" });
+var result = KStyleCss.Clean(row.Css, new StyleOptions { Allow = new[] { "color", "border-*" } });
+// result.Declarations, result.Rejected</code></pre>
+
+    <h3>Go</h3>
+    <p>Go 1.21+, standard library only.</p>
+<pre><code>import "github.com/KAStrack/kStyleEditor/sdk/go/kstyle"
+
+css, err := kstyle.Sanitize(row.CSS, kstyle.Options{Selector: "#field-12"})
+result := kstyle.Clean(row.CSS, kstyle.Options{Allow: []string{"color", "border-*"}})
+// result.Declarations, result.Rejected; Options{Compact: true} for one line</code></pre>
+
+    <h3>Ruby</h3>
+    <p>Ruby 3.0+, standard library only. The gem is in <code>sdk/ruby</code>.</p>
+<pre><code>require "kstyle_editor"
+
+css = KStyleEditor.sanitize(row.css, selector: "#field-12")
+result = KStyleEditor.clean(row.css, allow: ["color", "border-*"])
+# result[:declarations], result[:rejected]</code></pre>
+  </section>
+
+  <section id="browsers">
+    <h2>Browser support</h2>
+    <p>
+      The current versions of Chrome, Edge, Firefox and Safari. The scripts are ES5 and need nothing
+      newer than <code>classList</code>, <code>dataset</code> and <code>&lt;details&gt;</code>; the stylesheet
+      uses custom properties and, for narrow editors, container queries (without them the layout still
+      wraps, a little less tidily).
+    </p>
+  </section>
+
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    kStyleEditor 0.1.0 — MIT licensed.
+    <a href="https://github.com/KAStrack/kStyleEditor">Source on GitHub</a>.
+  </div>
+</footer>
+
+<script src="dist/k-style-css.min.js"></script>
+<script src="dist/k-style-editor.min.js"></script>
+<script src="assets/docs-toc.js"></script>
+<script>
+  (function () {
+    KStyleEditor.attach('#qs-css', { preview: true });
+
+    document.getElementById('default-basic').textContent = KStyleEditor.DEFAULT_BASIC.join(', ');
+    document.getElementById('default-advanced').textContent = KStyleEditor.DEFAULT_ADVANCED.join(', ');
+
+    var tbody = document.querySelector('#control-table tbody');
+    KStyleEditor.controls().forEach(function (c) {
+      var props = [];
+      c.fields.forEach(function (f) {
+        props.push(f.prop);
+        if (f.type === 'box' && f.corners) props.push('border-*-radius');
+        else if (f.type === 'box' && f.prop === 'inset') props.push('top/right/bottom/left');
+        else if (f.type === 'box') props.push(f.prop + '-*');
+        else if (f.type === 'stroke' && f.sides) props.push(f.prop + '-top/right/bottom/left');
+      });
+      var tr = document.createElement('tr');
+      [c.id, c.label, KStyleEditor.DEFAULT_LABELS.sections[c.section] || c.section, props.join(', ')].forEach(function (text, i) {
+        var td = document.createElement('td');
+        if (i === 0 || i === 3) {
+          var code = document.createElement('code');
+          code.textContent = text;
+          code.style.whiteSpace = 'normal';
+          td.appendChild(code);
+        } else {
+          td.textContent = text;
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }());
+</script>
+</body>
+</html>

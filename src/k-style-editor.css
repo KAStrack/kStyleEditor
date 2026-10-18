@@ -1,0 +1,694 @@
+/*!
+ * kStyleEditor 0.1.0 — editor stylesheet
+ * MIT Licence. https://github.com/KAStrack/kStyleEditor
+ *
+ * Every colour and size is a --kse-* custom property on .kse, so a theme is a
+ * handful of overrides. A new colour goes in all three blocks: light, the
+ * prefers-color-scheme media query, and [data-kse-theme="dark"].
+ */
+
+.kse {
+  --kse-bg: #ffffff;
+  --kse-fg: #1c2430;
+  --kse-muted: #5f6b7a;
+  --kse-border: #d9dee5;
+  --kse-sunken: #f5f7fa;
+  --kse-input-bg: #ffffff;
+  --kse-input-border: #c9d0d9;
+  --kse-accent: #2f6fd0;
+  --kse-accent-fg: #ffffff;
+  --kse-accent-soft: rgba(47, 111, 208, 0.12);
+  --kse-focus: rgba(47, 111, 208, 0.45);
+  --kse-warn: #9a5b00;
+  --kse-warn-bg: #fff6e5;
+  --kse-check-a: #e9edf2;
+  --kse-check-b: #ffffff;
+  --kse-radius: 8px;
+  --kse-radius-sm: 5px;
+  --kse-font: inherit;
+  --kse-font-size: 14px;
+  --kse-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --kse-label-width: 128px;
+  --kse-control-h: 30px;
+
+  box-sizing: border-box;
+  container-type: inline-size;
+  container-name: kse;
+  font-family: var(--kse-font);
+  font-size: var(--kse-font-size);
+  line-height: 1.4;
+  color: var(--kse-fg);
+  background: var(--kse-bg);
+  border: 1px solid var(--kse-border);
+  border-radius: var(--kse-radius);
+  text-align: left;
+}
+
+/* No overflow: hidden on .kse (it would clip the colour palette), so the
+   first strip rounds its own top corners instead. */
+.kse > :first-child { border-radius: calc(var(--kse-radius) - 1px) calc(var(--kse-radius) - 1px) 0 0; }
+
+@media (prefers-color-scheme: dark) {
+  .kse:not([data-kse-theme="light"]) {
+    --kse-bg: #161a20;
+    --kse-fg: #e5e9ef;
+    --kse-muted: #9aa4b2;
+    --kse-border: #2c333d;
+    --kse-sunken: #1d222a;
+    --kse-input-bg: #11151a;
+    --kse-input-border: #3a434f;
+    --kse-accent: #6aa5ff;
+    --kse-accent-fg: #0b1220;
+    --kse-accent-soft: rgba(106, 165, 255, 0.16);
+    --kse-focus: rgba(106, 165, 255, 0.5);
+    --kse-warn: #f0b45a;
+    --kse-warn-bg: #2b2414;
+    --kse-check-a: #2a3039;
+    --kse-check-b: #1f242c;
+  }
+}
+
+.kse[data-kse-theme="dark"] {
+  --kse-bg: #161a20;
+  --kse-fg: #e5e9ef;
+  --kse-muted: #9aa4b2;
+  --kse-border: #2c333d;
+  --kse-sunken: #1d222a;
+  --kse-input-bg: #11151a;
+  --kse-input-border: #3a434f;
+  --kse-accent: #6aa5ff;
+  --kse-accent-fg: #0b1220;
+  --kse-accent-soft: rgba(106, 165, 255, 0.16);
+  --kse-focus: rgba(106, 165, 255, 0.5);
+  --kse-warn: #f0b45a;
+  --kse-warn-bg: #2b2414;
+  --kse-check-a: #2a3039;
+  --kse-check-b: #1f242c;
+}
+
+.kse *, .kse *::before, .kse *::after { box-sizing: border-box; }
+.kse [hidden] { display: none !important; }
+.kse-hidden-textarea { display: none !important; }
+
+/* Host pages style bare inputs and buttons; :where() keeps these resets at
+   zero specificity so the rules below (and any theme) still win. */
+.kse :where(input, select, button, textarea) {
+  font: inherit;
+  color: inherit;
+  margin: 0;
+  letter-spacing: normal;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.kse :where(input[type="text"], input[type="search"], select, textarea) {
+  min-height: var(--kse-control-h);
+  padding: 4px 8px;
+  background: var(--kse-input-bg);
+  border: 1px solid var(--kse-input-border);
+  border-radius: var(--kse-radius-sm);
+  width: auto;
+  max-width: 100%;
+}
+
+.kse :where(select) {
+  padding-right: 4px;
+  cursor: pointer;
+}
+
+.kse :where(input, select, button, textarea, summary):focus-visible {
+  outline: 2px solid var(--kse-focus);
+  outline-offset: 1px;
+}
+
+.kse :where(input, select, button, textarea):disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ─── Preview ─────────────────────────────────────────────────────────────── */
+
+.kse-preview {
+  padding: 20px;
+  border-bottom: 1px solid var(--kse-border);
+  background-color: var(--kse-check-b);
+  background-image:
+    linear-gradient(45deg, var(--kse-check-a) 25%, transparent 25%, transparent 75%, var(--kse-check-a) 75%),
+    linear-gradient(45deg, var(--kse-check-a) 25%, transparent 25%, transparent 75%, var(--kse-check-a) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+  overflow: auto;
+  max-height: 320px;
+}
+
+.kse-preview-target {
+  color: #1c2430;
+  background: #ffffff;
+  border: 1px dashed #9aa4b2;
+  padding: 12px;
+}
+
+/* ─── Tabs ────────────────────────────────────────────────────────────────── */
+
+.kse-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  background: var(--kse-sunken);
+  border-bottom: 1px solid var(--kse-border);
+}
+
+.kse .kse-tab {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: var(--kse-radius-sm) var(--kse-radius-sm) 0 0;
+  padding: 7px 14px;
+  min-height: 32px;
+  color: var(--kse-muted);
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  top: 1px;
+}
+
+.kse .kse-tab:hover { color: var(--kse-fg); }
+
+.kse .kse-tab[aria-selected="true"] {
+  background: var(--kse-bg);
+  border-color: var(--kse-border);
+  color: var(--kse-accent);
+}
+
+.kse-panel { padding: 10px 12px 12px; }
+
+/* ─── Control rows ────────────────────────────────────────────────────────── */
+
+.kse-controls { display: flex; flex-direction: column; }
+
+.kse-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--kse-border);
+}
+
+.kse-controls > .kse-control:first-child { border-top: 0; }
+
+.kse-control-head {
+  flex: 0 0 var(--kse-label-width);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--kse-control-h);
+}
+
+.kse-control-label {
+  font-weight: 600;
+  color: var(--kse-fg);
+}
+
+.kse-control[data-set="true"] .kse-control-label::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  vertical-align: 2px;
+  border-radius: 50%;
+  background: var(--kse-accent);
+}
+
+.kse .kse-reset {
+  appearance: none;
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--kse-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.kse-control[data-set="true"] .kse-reset { visibility: visible; }
+.kse .kse-reset:hover { background: var(--kse-accent-soft); color: var(--kse-fg); }
+
+.kse-control-body {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+@container kse (max-width: 420px) {
+  .kse-control-head { flex-basis: 100%; }
+}
+
+/* ─── Fields ──────────────────────────────────────────────────────────────── */
+
+.kse-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.kse-field--font .kse-select { min-width: 150px; }
+.kse-field--text, .kse-field--image, .kse-compound { flex: 1 1 100%; }
+
+.kse-field-label, .kse-sub-label {
+  font-size: 0.8em;
+  color: var(--kse-muted);
+}
+
+.kse-raw { display: none; font-family: var(--kse-mono); width: 100%; }
+.kse-field[data-raw="true"] > .kse-raw { display: block; }
+.kse-field[data-raw="true"] > :not(.kse-raw):not(.kse-field-label) { display: none; }
+.kse-field[data-raw="true"] > .kse-raw { border-style: dashed; }
+
+.kse-row, .kse-box-sides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-end;
+}
+
+.kse-sub { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+/* Length: number + unit as one joined control */
+.kse-length {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+}
+
+.kse .kse-num {
+  width: 64px;
+  min-height: var(--kse-control-h);
+  padding: 4px 6px;
+  background: var(--kse-input-bg);
+  border: 1px solid var(--kse-input-border);
+  border-radius: var(--kse-radius-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.kse .kse-length > .kse-num:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.kse .kse-unit {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding: 2px 2px 2px 6px;
+  color: var(--kse-muted);
+  min-width: 52px;
+}
+
+.kse-length[data-keyword="true"] .kse-num { display: none; }
+.kse-length[data-keyword="true"] .kse-unit {
+  margin-left: 0;
+  border-radius: var(--kse-radius-sm);
+  color: var(--kse-fg);
+}
+
+.kse-unit-fixed {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  margin-left: -1px;
+  border: 1px solid var(--kse-input-border);
+  border-radius: 0 var(--kse-radius-sm) var(--kse-radius-sm) 0;
+  background: var(--kse-sunken);
+  color: var(--kse-muted);
+  font-size: 0.85em;
+}
+
+/* Colour: a chip that opens the palette, then a text box. The chip has a
+   caret so it reads as something to press, not a decoration. */
+.kse-colour {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  --kse-current: transparent;
+}
+
+.kse .kse-swatch {
+  appearance: none;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  width: 46px;
+  height: var(--kse-control-h);
+  padding: 3px 18px 3px 3px;
+  border: 1px solid var(--kse-input-border);
+  border-radius: var(--kse-radius-sm);
+  background: var(--kse-input-bg);
+  cursor: pointer;
+  position: relative;
+}
+
+/* The colour itself, over a checkerboard so transparency shows. */
+.kse .kse-swatch::before {
+  content: "";
+  flex: 1 1 auto;
+  align-self: stretch;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  background:
+    linear-gradient(var(--kse-current), var(--kse-current)),
+    repeating-conic-gradient(var(--kse-check-a) 0 25%, var(--kse-check-b) 0 50%) 0 0 / 8px 8px;
+}
+
+.kse .kse-swatch::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  margin-top: -4px;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--kse-muted);
+  border-bottom: 1.5px solid var(--kse-muted);
+  transform: rotate(45deg);
+}
+
+.kse .kse-swatch:hover { border-color: var(--kse-accent); }
+.kse .kse-swatch[aria-expanded="true"] { border-color: var(--kse-accent); box-shadow: 0 0 0 2px var(--kse-accent-soft); }
+
+/* Rendered (showPicker() needs that) but invisible, under the chip, so the
+   system dialog opens beside it. */
+.kse .kse-picker {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 46px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kse .kse-colour-text { width: 150px; font-family: var(--kse-mono); font-size: 0.9em; }
+
+.kse-palette {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: min(312px, calc(100vw - 32px));
+  padding: 10px;
+  background: var(--kse-bg);
+  border: 1px solid var(--kse-border);
+  border-radius: var(--kse-radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.kse-palette[data-up="true"] { top: auto; bottom: calc(100% + 6px); }
+
+.kse-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 28px);
+  gap: 6px;
+}
+
+@media (max-width: 360px) {
+  .kse-palette-grid { grid-template-columns: repeat(6, 28px); }
+}
+
+.kse .kse-chip {
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 50%;
+  cursor: pointer;
+  background:
+    linear-gradient(var(--kse-chip), var(--kse-chip)),
+    repeating-conic-gradient(var(--kse-check-a) 0 25%, var(--kse-check-b) 0 50%) 0 0 / 8px 8px;
+}
+
+.kse .kse-chip:hover { transform: scale(1.12); }
+.kse .kse-chip[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--kse-bg), 0 0 0 4px var(--kse-accent); }
+
+.kse-palette-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--kse-border);
+}
+
+.kse-palette-grid:empty + .kse-palette-actions,
+.kse-palette > .kse-palette-actions:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.kse .kse-palette-btn {
+  appearance: none;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--kse-input-border);
+  border-radius: var(--kse-radius-sm);
+  background: var(--kse-input-bg);
+  cursor: pointer;
+}
+
+.kse .kse-palette-btn:hover { border-color: var(--kse-accent); color: var(--kse-accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .kse .kse-chip:hover { transform: none; }
+}
+
+/* Range */
+.kse-range { display: inline-flex; align-items: center; gap: 8px; }
+.kse .kse-slider { width: 140px; accent-color: var(--kse-accent); }
+.kse-range[data-empty="true"] .kse-slider { opacity: 0.45; }
+
+/* Text */
+.kse-text-wrap { display: block; }
+.kse .kse-text { width: 100%; font-family: var(--kse-mono); font-size: 0.9em; }
+
+/* Box: padding, margin, radius, offsets */
+.kse-box {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: end;
+}
+
+.kse .kse-link {
+  appearance: none;
+  width: var(--kse-control-h);
+  height: var(--kse-control-h);
+  border: 1px solid var(--kse-input-border);
+  border-radius: var(--kse-radius-sm);
+  background: var(--kse-input-bg);
+  color: var(--kse-muted);
+  cursor: pointer;
+  position: relative;
+}
+
+/* Two chain links, drawn rather than shipped as an icon font. */
+.kse .kse-link::before,
+.kse .kse-link::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 6px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  top: 50%;
+  margin-top: -5px;
+}
+.kse .kse-link::before { left: 5px; }
+.kse .kse-link::after { right: 5px; }
+.kse .kse-link[aria-pressed="true"] {
+  background: var(--kse-accent-soft);
+  border-color: var(--kse-accent);
+  color: var(--kse-accent);
+}
+.kse .kse-link[aria-pressed="false"]::before { transform: translateY(-3px) rotate(-20deg); }
+.kse .kse-link[aria-pressed="false"]::after { transform: translateY(3px) rotate(-20deg); }
+
+.kse-box[data-linked="true"] .kse-box-sides { display: none; }
+.kse-box[data-linked="false"] .kse-box-all { display: none; }
+.kse-box .kse-box-sides { grid-column: 2; }
+.kse-box .kse-box-all { grid-column: 2; grid-row: 1; }
+.kse-box .kse-link { grid-column: 1; grid-row: 1; align-self: end; }
+
+/* Segmented buttons (border sides) */
+.kse-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  border: 1px solid var(--kse-input-border);
+  border-radius: var(--kse-radius-sm);
+  overflow: hidden;
+}
+
+.kse .kse-seg-btn {
+  appearance: none;
+  border: 0;
+  border-left: 1px solid var(--kse-input-border);
+  background: var(--kse-input-bg);
+  color: var(--kse-muted);
+  padding: 4px 10px;
+  min-height: 28px;
+  cursor: pointer;
+  position: relative;
+}
+
+.kse .kse-seg-btn:first-child { border-left: 0; }
+.kse .kse-seg-btn[aria-pressed="true"] { background: var(--kse-accent); color: var(--kse-accent-fg); }
+.kse .kse-seg-btn[data-set="true"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.kse-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--kse-control-h);
+  cursor: pointer;
+}
+
+.kse-check input { width: 16px; height: 16px; accent-color: var(--kse-accent); }
+
+/* Background image: show only the inputs the chosen type needs */
+.kse-image .kse-only-url,
+.kse-image .kse-only-linear,
+.kse-image .kse-only-gradient { display: none; }
+.kse-image[data-mode="url"] .kse-only-url { display: flex; flex: 1 1 200px; }
+.kse-image[data-mode="linear"] .kse-only-linear,
+.kse-image[data-mode="linear"] .kse-only-gradient,
+.kse-image[data-mode="radial"] .kse-only-gradient { display: flex; }
+
+/* ─── Advanced sections ───────────────────────────────────────────────────── */
+
+.kse .kse-filter { width: 100%; margin-bottom: 8px; }
+
+.kse-section {
+  border: 1px solid var(--kse-border);
+  border-radius: var(--kse-radius-sm);
+  margin-top: 6px;
+}
+
+.kse-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  min-height: 36px;
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+  background: var(--kse-sunken);
+  border-radius: var(--kse-radius-sm);
+}
+
+.kse-section-head::-webkit-details-marker { display: none; }
+
+.kse-section-head::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--kse-muted);
+  border-bottom: 2px solid var(--kse-muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  flex: 0 0 auto;
+}
+
+.kse-section[open] > .kse-section-head { border-radius: var(--kse-radius-sm) var(--kse-radius-sm) 0 0; border-bottom: 1px solid var(--kse-border); }
+.kse-section[open] > .kse-section-head::before { transform: rotate(45deg); }
+
+.kse-count:not(:empty) {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--kse-accent);
+  color: var(--kse-accent-fg);
+  font-size: 0.75em;
+  line-height: 20px;
+  text-align: center;
+}
+
+.kse-section > .kse-controls { padding: 0 10px; }
+
+.kse-empty { color: var(--kse-muted); margin: 8px 0; }
+
+/* ─── Code tab ────────────────────────────────────────────────────────────── */
+
+.kse .kse-code {
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  font-family: var(--kse-mono);
+  font-size: 0.9em;
+  line-height: 1.55;
+  padding: 10px;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.kse-issues {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: var(--kse-radius-sm);
+  background: var(--kse-warn-bg);
+  color: var(--kse-warn);
+  font-size: 0.9em;
+}
+
+.kse-issues-head { margin: 4px 0; font-weight: 600; }
+.kse-issues ul { margin: 0 0 4px; padding-left: 18px; }
+.kse-issues li { font-family: var(--kse-mono); font-size: 0.95em; word-break: break-word; }
+
+.kse-note {
+  margin: 10px 0 0;
+  font-size: 0.875em;
+  color: var(--kse-muted);
+}
+
+.kse .kse-linkbtn {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--kse-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.kse-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kse *, .kse *::before { transition: none !important; }
+}
