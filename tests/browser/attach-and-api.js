@@ -130,6 +130,72 @@ padding: 4px 8px</textarea></form>
     return ok;
   }));
 
+  // Option texts: under labels.options, by field and then by option value.
+  const optionTexts = await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend', '<textarea id="opt"></textarea><textarea id="opt2"></textarea>');
+    function texts(ed, sel) {
+      return Array.prototype.map.call(ed.root.querySelectorAll(sel + ' option'), function (o) { return o.value + '=' + o.textContent; });
+    }
+    var e = KStyleEditor.attach('#opt', {
+      advanced: false,
+      basic: ['font', 'tone'],
+      controls: { tone: { label: 'Tone', fields: [{ type: 'select', prop: 'text-align', key: 'side', options: [['left', 'Left'], ['right', 'Right']] }] } },
+      labels: {
+        options: {
+          'font.weight': { '700': '700 Negrita', '400': '400 Normal' },
+          'font.style': { italic: 'Cursiva' },
+          'font.family': { 'Georgia, "Times New Roman", serif': 'Con serifa' },
+          'tone.side': { right: 'Derecha' }
+        }
+      }
+    });
+    var weight = e.root.querySelector('[data-control=font] .kse-field--select select');
+    weight.value = '700';
+    weight.dispatchEvent(new Event('change', { bubbles: true }));
+    var out = {
+      selects: Array.prototype.map.call(e.root.querySelectorAll('[data-control=font] .kse-field--font select, [data-control=font] .kse-field--select select'), function (s) {
+        return Array.prototype.map.call(s.options, function (o) { return o.value + '=' + o.textContent; });
+      }),
+      tone: texts(e, '[data-control=tone]'),
+      css: e.getCss()
+    };
+    e.destroy();
+    var plain = KStyleEditor.attach('#opt2', { advanced: false });
+    out.plain = Array.prototype.map.call(plain.root.querySelectorAll('[data-control=font] .kse-field--font select, [data-control=font] .kse-field--select select'), function (s) {
+      return Array.prototype.map.call(s.options, function (o) { return o.textContent; });
+    });
+    plain.destroy();
+    out.defaultsUntouched = JSON.stringify(KStyleEditor.DEFAULT_LABELS.options) === '{}';
+    return out;
+  });
+  const [family, weightOpts, styleOpts] = optionTexts.selects;
+  c.ok('option label translated', weightOpts.indexOf('700=700 Negrita') !== -1 && weightOpts.indexOf('400=400 Normal') !== -1, weightOpts);
+  c.ok('untranslated option keeps its own label', weightOpts.indexOf('500=500 Medium') !== -1 && weightOpts.indexOf('bold=bold') !== -1, weightOpts);
+  c.ok('a bare-string option can be given a label', styleOpts.indexOf('italic=Cursiva') !== -1 && styleOpts.indexOf('oblique=oblique') !== -1, styleOpts);
+  c.ok('font stacks can be given a label', family.indexOf('Georgia, "Times New Roman", serif=Con serifa') !== -1 &&
+    family.indexOf('Helvetica, Arial, sans-serif=Sans-serif') !== -1, family);
+  c.ok('a custom control\'s options can be translated', optionTexts.tone.join('|') === '=Default|left=Left|right=Derecha', optionTexts.tone);
+  c.ok('a translated option still saves its CSS value', optionTexts.css === 'font-weight: 700;', optionTexts.css);
+  c.ok('option labels stay with their editor', optionTexts.plain[1].indexOf('700 Bold') !== -1 &&
+    optionTexts.plain[2].indexOf('italic') !== -1 && optionTexts.defaultsUntouched, optionTexts.plain);
+
+  // Default palette and fonts, exported as copies.
+  c.ok('DEFAULT_SWATCHES and DEFAULT_FONTS are exported as copies', await page.evaluate(() => {
+    var s = KStyleEditor.DEFAULT_SWATCHES;
+    var f = KStyleEditor.DEFAULT_FONTS;
+    var ok = s.length === 24 && s[0][0] === '#000000' && s[0][1] === 'Black' && s[23][1] === 'Light pink' &&
+      JSON.stringify(f) === JSON.stringify(KStyleEditor.DEFAULTS.fonts);
+    s[0][1] = 'Changed';
+    f[0].label = 'Changed';
+    document.body.insertAdjacentHTML('beforeend', '<textarea id="sw"></textarea>');
+    var e = KStyleEditor.attach('#sw', { advanced: false });
+    ok = ok && e.root.querySelector('.kse-chip').getAttribute('title') === 'Black' &&
+      e.root.querySelector('[data-control=font] .kse-field--font option:nth-child(2)').textContent === 'System' &&
+      KStyleEditor.DEFAULTS.fonts[0].label === 'System';
+    e.destroy();
+    return ok;
+  }));
+
   // Errors are explicit
   c.ok('attach refuses a non-textarea', await page.evaluate(() => {
     try { KStyleEditor.attach(document.body); return false; } catch (e) { return /textarea/.test(e.message); }

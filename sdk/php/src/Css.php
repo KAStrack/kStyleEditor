@@ -18,7 +18,7 @@ use InvalidArgumentException;
  */
 final class Css
 {
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.1.1';
 
     /**
      * Every property the built-in controls can write, plus the common

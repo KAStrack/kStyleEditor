@@ -6,7 +6,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <PackageId>Kastrack.StyleEditor</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>KAStrack</Authors>
     <Description>Server-side sanitiser for the CSS that kStyleEditor writes: parse, allow-list and re-serialise untrusted CSS declarations.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

@@ -10,7 +10,7 @@
 #   require "kstyle_editor"
 #   KStyleEditor.sanitize(untrusted, selector: "#field-12")
 module KStyleEditor
-  VERSION = "0.1.0"
+  VERSION = "0.1.1"
 
   # Every property the built-in controls can write, plus the common shorthands
   # people type into the Code tab.

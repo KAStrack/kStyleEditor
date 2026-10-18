@@ -42,7 +42,7 @@ namespace Kastrack.StyleEditor
     public static class KStyleCss
     {
         /// <summary>The SDK version.</summary>
-        public const string Version = "0.1.0";
+        public const string Version = "0.1.1";
 
         /// <summary>
         /// Every property the built-in controls can write, plus the common shorthands

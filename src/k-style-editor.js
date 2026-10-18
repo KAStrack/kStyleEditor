@@ -1,5 +1,5 @@
 /*!
- * kStyleEditor 0.1.0
+ * kStyleEditor 0.1.1
  * A zero-dependency visual CSS editor that takes over a <textarea>.
  * MIT Licence. https://github.com/KAStrack/kStyleEditor
  *
@@ -18,7 +18,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function (KStyleCss) {
   'use strict';
 
-  var VERSION = '0.1.0';
+  var VERSION = '0.1.1';
 
   // The property on a <textarea> that points back at its editor. It is how
   // get() and detach() find an instance whose attach() return value was lost,
@@ -152,7 +152,8 @@
   // Every string the editor shows. Pass `labels` to translate or reword any of
   // them. Control and field titles live apart, in `labels.controls`, keyed by
   // control id (`padding`) and by `id.key` (`font.size`), so a control id can
-  // never collide with an interface string.
+  // never collide with an interface string. The texts of a field's options go
+  // in `labels.options`, keyed by `id.key` and then by option value.
   var DEFAULT_LABELS = {
     basic: 'Basic',
     advanced: 'Advanced',
@@ -211,6 +212,7 @@
       url: 'URL scheme not allowed'
     },
     controls: {},
+    options: {},
     sections: {
       typography: 'Typography',
       spacing: 'Spacing',
@@ -815,12 +817,16 @@
 
   var CUSTOM = '\u0000custom';
 
+  // `opts.labels` ({ value: text }) translates option texts; an option it does
+  // not name keeps the label it was defined with.
   function selectWidget(ctx, opts) {
     var select = el('select', 'kse-select', { id: opts.id || null, 'aria-label': opts.ariaLabel || null });
     var options = normaliseOptions(opts.options);
+    var texts = opts.labels || {};
     select.appendChild(el('option', null, { value: '', text: opts.unsetLabel || ctx.labels.unset }));
     options.forEach(function (o) {
-      var node = el('option', null, { value: o.value, text: o.label });
+      var text = Object.prototype.hasOwnProperty.call(texts, o.value) && texts[o.value] ? texts[o.value] : o.label;
+      var node = el('option', null, { value: o.value, text: text });
       if (opts.styleOptions) node.style.fontFamily = o.value;
       select.appendChild(node);
     });
@@ -924,7 +930,7 @@
 
   FIELD_TYPES.select = function (spec, ctx) {
     return singleField(spec, ctx, function (o) {
-      return selectWidget(ctx, extend({}, o, { options: spec.options, custom: spec.custom }));
+      return selectWidget(ctx, extend({}, o, { options: spec.options, custom: spec.custom, labels: ctx.optionLabels(spec) }));
     });
   };
 
@@ -934,7 +940,7 @@
       return { label: f.split(',')[0].replace(/["']/g, ''), value: f };
     });
     return singleField(spec, ctx, function (o) {
-      return selectWidget(ctx, extend({}, o, { options: fonts, custom: true, styleOptions: true }));
+      return selectWidget(ctx, extend({}, o, { options: fonts, custom: true, styleOptions: true, labels: ctx.optionLabels(spec) }));
     });
   };
 
@@ -1505,6 +1511,7 @@
     this.labels.reasons = extend({}, DEFAULT_LABELS.reasons, options.labels && options.labels.reasons);
     this.labels.sections = extend({}, DEFAULT_LABELS.sections, options.labels && options.labels.sections);
     this.labels.controls = extend({}, options.labels && options.labels.controls);
+    this.labels.options = extend({}, options.labels && options.labels.options);
     this.decls = KStyleCss.parse(textarea.value);
     this._listeners = {};
     this._fields = [];
@@ -1679,6 +1686,10 @@
       controlLabel: title,
       fieldLabel: function (spec) {
         return self.labels.controls[def.id + '.' + (spec.key || spec.prop)] || spec.label;
+      },
+      // { value: text } for the field's options, from labels.options['id.key'].
+      optionLabels: function (spec) {
+        return self.labels.options[def.id + '.' + (spec.key || spec.prop)] || null;
       },
       get: function (prop) { return self.get(prop); },
       // What the preview element currently shows for a property, or ''.
@@ -1941,9 +1952,13 @@
 
   // ─── Preview ──────────────────────────────────────────────────────────────
   //
-  // The target's own style attribute is put back before every apply, so
-  // removing a declaration in the editor really removes it, and destroy()
-  // leaves the element exactly as it was found.
+  // The target's own inline style is put back before every apply, so removing
+  // a declaration in the editor really removes it, and destroy() leaves the
+  // element exactly as it was found.
+  //
+  // Only the CSSOM is used (style.cssText, style.setProperty). A page whose
+  // Content-Security-Policy has no 'unsafe-inline' in style-src refuses every
+  // write to the style attribute, but not those.
 
   Editor.prototype._setPreviewTarget = function (preview) {
     this._restorePreview();
@@ -1951,28 +1966,46 @@
     if (preview === true) target = this._builtinPreview || null;
     else if (preview) target = resolve(preview);
     this._previewEl = target;
-    this._previewOriginal = target ? target.getAttribute('style') : null;
+    // The attribute, to give back on restore, and the inline style the
+    // browser actually applied from it. They differ when a CSP blocked the
+    // attribute: its text is there but none of it applies.
+    this._previewOriginal = target ? { attr: target.getAttribute('style'), css: target.style.cssText } : null;
   };
 
-  // Always set the attribute before removing it. Chromium and WebKit sync the
-  // attribute from inline-style changes lazily, and a bare removeAttribute()
-  // after setProperty() leaves an empty style="" behind.
-  function resetStyle(t, original) {
-    t.setAttribute('style', original || '');
-    if (original === null) t.removeAttribute('style');
+  var probe = null;
+
+  /** Whether `text`, as a style attribute, applies exactly the inline style `css`. */
+  function appliesAs(text, css) {
+    probe = probe || document.createElement('div');
+    probe.style.cssText = text;
+    return probe.style.cssText === css;
   }
 
   Editor.prototype._restorePreview = function () {
     var t = this._previewEl;
+    var original = this._previewOriginal;
     if (!t) return;
-    resetStyle(t, this._previewOriginal);
+    t.style.cssText = original.css;
+    if (original.attr === null) {
+      // Chromium and WebKit write the attribute back from the CSSOM lazily,
+      // so a removeAttribute() straight after a cssText write leaves an empty
+      // style="" behind. Reading the attribute first makes them write it now.
+      t.getAttribute('style');
+      t.removeAttribute('style');
+    } else if (t.getAttribute('style') !== original.attr && appliesAs(original.attr, original.css)) {
+      // The CSSOM writes its own spelling ("a: b;"). Put the original text
+      // back, unless a CSP blocked it, in which case writing it would only be
+      // refused again; the element then looks as it did, with that spelling.
+      t.setAttribute('style', original.attr);
+    }
     this._previewEl = null;
+    this._previewOriginal = null;
   };
 
   Editor.prototype._applyPreview = function (decls) {
     var t = this._previewEl;
     if (!t) return;
-    resetStyle(t, this._previewOriginal);
+    t.style.cssText = this._previewOriginal.css;
     decls.forEach(function (d) {
       try { t.style.setProperty(d.property, d.value, d.important ? 'important' : ''); } catch (e) { /* ignored by the browser anyway */ }
     });
@@ -2158,6 +2191,8 @@
     },
     DEFAULT_BASIC: DEFAULT_BASIC.slice(),
     DEFAULT_ADVANCED: DEFAULT_ADVANCED.slice(),
+    DEFAULT_SWATCHES: DEFAULT_PALETTE.map(function (c) { return c.slice(); }),
+    DEFAULT_FONTS: DEFAULT_FONTS.map(function (f) { return extend({}, f); }),
     DEFAULT_LABELS: DEFAULT_LABELS,
     DEFAULTS: DEFAULTS,
     SECTIONS: SECTIONS.slice(),

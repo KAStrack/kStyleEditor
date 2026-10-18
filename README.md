@@ -4,7 +4,7 @@ A zero-dependency visual CSS editor that takes over a `<textarea>`, and server-s
 
 **[Live demo and documentation →](https://kastrack.github.io/kStyleEditor/)**
 
-**Current version: 0.1.0**
+**Current version: 0.1.1**
 
 ---
 
@@ -137,15 +137,43 @@ Add your own with `controls` (one editor) or `KStyleEditor.registerControl()` (a
 | `startTab` | `'basic'` | `'basic'`, `'advanced'` or `'code'`. |
 | `hideTextarea` | `true` | Hide the original textarea. |
 | `units` | `['px','em','rem','%']` | Units for length fields that do not set their own. |
-| `fonts` | five stacks | Font stacks for the Font control. |
-| `swatches` | `null` | The palette each colour field opens (24 named colours by default); `[value, label]` pairs for your own. |
+| `fonts` | five stacks | Font stacks for the Font control (`KStyleEditor.DEFAULT_FONTS` by default). |
+| `swatches` | `null` | The palette each colour field opens (`KStyleEditor.DEFAULT_SWATCHES`, 24 named colours, by default); `[value, label]` pairs for your own. |
 | `openSetSections` | `true` | Open Advanced sections that already hold values. |
 | `theme` | `null` | `'light'` or `'dark'` to pin; `null` follows the page. |
 | `readOnly` | `false` | Show, do not edit. |
-| `labels` | `null` | Override interface text. |
+| `labels` | `null` | Override interface text. See [Labels](#labels). |
 | `onChange` | `null` | `function (css, payload)` after every change. |
 
-Methods: `getCss()`, `getDeclarations()`, `setCss()`, `get()`, `set()`, `clear()`, `sync()`, `setTab()`, `setPreview()`, `setSelector()`, `setTheme()`, `on()`, `off()`, `destroy()`. Statics: `attach()`, `attachAll()`, `get()`, `detach()`, `registerControl()`, `registerFieldType()`, `controls()`. Full reference: [docs](https://kastrack.github.io/kStyleEditor/docs.html).
+Methods: `getCss()`, `getDeclarations()`, `setCss()`, `get()`, `set()`, `clear()`, `sync()`, `setTab()`, `setPreview()`, `setSelector()`, `setTheme()`, `on()`, `off()`, `destroy()`. Statics: `attach()`, `attachAll()`, `get()`, `detach()`, `registerControl()`, `registerFieldType()`, `controls()`, and the values `VERSION`, `DEFAULT_BASIC`, `DEFAULT_ADVANCED`, `DEFAULT_SWATCHES`, `DEFAULT_FONTS`, `DEFAULT_LABELS`, `DEFAULTS` and `SECTIONS`. `DEFAULT_SWATCHES` and `DEFAULT_FONTS` are copies, so your own colours or fonts can go first:
+
+```js
+KStyleEditor.attach('#css', {
+  swatches: [['#0b3d91', 'Brand blue']].concat(KStyleEditor.DEFAULT_SWATCHES),
+  fonts: [{ label: 'Brand', value: '"Inter", sans-serif' }].concat(KStyleEditor.DEFAULT_FONTS)
+});
+```
+
+The element preview works under a strict Content-Security-Policy (`style-src` without `'unsafe-inline'`): it writes only through the CSSOM, never the `style` attribute.
+
+Full reference: [docs](https://kastrack.github.io/kStyleEditor/docs.html).
+
+### Labels
+
+Every interface string is in `KStyleEditor.DEFAULT_LABELS`; pass `labels` to override any of them. Control titles go in `labels.controls` by control id, field titles by `id.key` (the field's `key`, or its property), section names in `labels.sections`, and the texts of a select or font field's options in `labels.options`, by `id.key` and then by option value:
+
+```js
+KStyleEditor.attach('#css', {
+  labels: {
+    advanced: 'Avanzado',
+    controls: { color: 'Color del texto', 'font.weight': 'Grosor' },
+    options: { 'font.weight': { '700': '700 Negrita', '400': '400 Normal' }, 'font.style': { italic: 'Cursiva' } },
+    sections: { typography: 'Tipografía' }
+  }
+});
+```
+
+An option you do not name keeps its own label. `KStyleEditor.controls()` lists every control, with each field's `options`.
 
 ---
 
@@ -189,7 +217,8 @@ npm install
 npm test                 # JS SDK conformance (node:test)
 npm run test:php         # PHP SDK conformance
 npm run test:python      # Python SDK conformance
-npm run test:browser     # builds, then drives the editor and the site in Chromium (Playwright)
+npm run test:browser     # builds, then drives the editor and the site in Chromium (Playwright);
+                         # the strict-CSP preview check also runs in WebKit and Firefox
 npm run test:all         # all of the above
 ```
 
