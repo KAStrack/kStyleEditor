@@ -1,5 +1,5 @@
 /*!
- * kStyleEditor 0.1.2
+ * kStyleEditor 0.1.3
  * A zero-dependency visual CSS editor that takes over a <textarea>.
  * MIT Licence. https://github.com/KAStrack/kStyleEditor
  *
@@ -18,7 +18,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function (KStyleCss) {
   'use strict';
 
-  var VERSION = '0.1.2';
+  var VERSION = '0.1.3';
 
   // The property on a <textarea> that points back at its editor. It is how
   // get() and detach() find an instance whose attach() return value was lost,
@@ -709,6 +709,30 @@
     if (openPalette) openPalette.close(refocus);
   }
 
+  // Gap between chip and palette, and the margin kept from the viewport edge.
+  var PALETTE_GAP = 6;
+  var PALETTE_EDGE = 8;
+
+  function parentOf(node) {
+    var p = node.parentNode;
+    return p && p.nodeType === 11 ? p.host : p;
+  }
+
+  /** Whether any of `node` shows in the viewport and in every box that clips it. */
+  function inView(node) {
+    var r = node.getBoundingClientRect();
+    var root = document.documentElement;
+    if (!r.width && !r.height) return false;
+    if (r.bottom <= 0 || r.right <= 0 || r.top >= root.clientHeight || r.left >= root.clientWidth) return false;
+    for (var n = parentOf(node); n && n.nodeType === 1 && n !== document.body && n !== root; n = parentOf(n)) {
+      var cs = window.getComputedStyle(n);
+      if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+      var b = n.getBoundingClientRect();
+      if (r.bottom <= b.top || r.top >= b.bottom || r.right <= b.left || r.left >= b.right) return false;
+    }
+    return true;
+  }
+
   function colourWidget(ctx, opts) {
     var L = ctx.labels;
     var wrap = el('span', 'kse-colour');
@@ -724,6 +748,12 @@
     var picker = el('input', 'kse-picker', { type: 'color', tabindex: '-1', 'aria-hidden': 'true' });
     var pop = el('div', 'kse-palette', { role: 'dialog', 'aria-label': L.palette });
     pop.hidden = true;
+    // The palette floats in the top layer, where no ancestor's overflow or
+    // transform can clip, scroll or move it. It stays inside the editor in
+    // the DOM, so it inherits the theme. Without popover support it is
+    // position: fixed instead (see place()).
+    var layer = typeof pop.showPopover === 'function';
+    if (layer) pop.setAttribute('popover', 'manual');
     wrap.appendChild(chip);
     wrap.appendChild(picker);
     wrap.appendChild(text);
@@ -778,13 +808,49 @@
         toHex(ctx.computed ? ctx.computed(opts.prop) : '') || '#3b82f6';
     }
 
+    function move(left, top) {
+      pop.style.setProperty('left', left + 'px');
+      pop.style.setProperty('top', top + 'px');
+    }
+
+    // Below the chip; above it if there is not room below and more above; if
+    // neither fits, capped to the larger side and scrolling. Lined up with the
+    // chip's left edge, but kept PALETTE_EDGE inside the viewport's right.
     function place() {
-      // Open downwards unless that runs off the bottom of the viewport and
-      // there is more room above.
-      pop.removeAttribute('data-up');
+      var root = document.documentElement;
+      var vw = root.clientWidth || window.innerWidth;
+      var vh = root.clientHeight || window.innerHeight;
       var r = chip.getBoundingClientRect();
+      pop.style.removeProperty('max-height');
+      move(0, 0);
+      var w = pop.offsetWidth;
       var h = pop.offsetHeight;
-      if (r.bottom + h + 8 > window.innerHeight && r.top - h - 8 > 0) pop.setAttribute('data-up', 'true');
+      var below = vh - r.bottom - PALETTE_GAP - PALETTE_EDGE;
+      var above = r.top - PALETTE_GAP - PALETTE_EDGE;
+      var up = h > below && above > below;
+      var room = Math.floor(up ? above : below);
+      if (h > room) {
+        pop.style.setProperty('max-height', Math.max(room, 0) + 'px');
+        h = pop.offsetHeight;
+      }
+      var left = Math.max(0, Math.min(r.left, vw - PALETTE_EDGE - w));
+      var top = up ? r.top - PALETTE_GAP - h : r.bottom + PALETTE_GAP;
+      move(left, top);
+      // In the top layer that is exact. A fixed palette under a transformed
+      // ancestor is placed from that ancestor instead, so measure and correct.
+      var got = pop.getBoundingClientRect();
+      if (Math.abs(got.left - left) > 0.5 || Math.abs(got.top - top) > 0.5) move(2 * left - got.left, 2 * top - got.top);
+      if (up) pop.setAttribute('data-up', 'true');
+      else pop.removeAttribute('data-up');
+    }
+
+    // Follow the chip when anything scrolls or the window resizes, and close
+    // once the chip is scrolled out of sight. The palette's own scrolling
+    // (when it is capped) is not a move.
+    function onMove(e) {
+      if (e && e.target && e.target.nodeType === 1 && pop.contains(e.target)) return;
+      if (!inView(chip)) api.close(false);
+      else place();
     }
 
     function onDocDown(e) {
@@ -804,21 +870,31 @@
           b.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
         pop.hidden = false;
+        if (layer) {
+          try { pop.showPopover(); } catch (e) { /* already open, or not in the page */ }
+        }
         chip.setAttribute('aria-expanded', 'true');
         place();
         openPalette = api;
         document.addEventListener('mousedown', onDocDown, true);
         document.addEventListener('touchstart', onDocDown, true);
+        document.addEventListener('scroll', onMove, true);
+        window.addEventListener('resize', onMove);
         var focus = grid.querySelector('[aria-pressed="true"]') || cells[0] || custom;
         focus.focus();
       },
       close: function (refocus) {
         if (pop.hidden) return;
+        if (layer) {
+          try { pop.hidePopover(); } catch (e) { /* already closed */ }
+        }
         pop.hidden = true;
         chip.setAttribute('aria-expanded', 'false');
         if (openPalette === api) openPalette = null;
         document.removeEventListener('mousedown', onDocDown, true);
         document.removeEventListener('touchstart', onDocDown, true);
+        document.removeEventListener('scroll', onMove, true);
+        window.removeEventListener('resize', onMove);
         if (refocus) chip.focus();
       }
     };

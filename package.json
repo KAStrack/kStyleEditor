@@ -1,6 +1,6 @@
 {
   "name": "@kastrack/style-editor",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A zero-dependency visual CSS editor that takes over a <textarea>, plus server-side SDKs that sanitise the CSS it writes.",
   "keywords": [
     "css",

@@ -12,7 +12,7 @@
 
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.2</span></a>
+    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.3</span></a>
     <nav class="site-nav">
       <a href="./">Home</a>
       <a href="demo.html">Playground</a>
@@ -343,7 +343,7 @@ editor.setInherited(function (property) { return otherTheme[property] || ''; });
     <table>
       <thead><tr><th>Value</th><th>Holds</th></tr></thead>
       <tbody>
-        <tr><td><code>KStyleEditor.VERSION</code></td><td>The version, e.g. <code>'0.1.2'</code>.</td></tr>
+        <tr><td><code>KStyleEditor.VERSION</code></td><td>The version, e.g. <code>'0.1.3'</code>.</td></tr>
         <tr><td><code>KStyleEditor.DEFAULT_BASIC</code></td><td>The control ids on the Basic tab by default.</td></tr>
         <tr><td><code>KStyleEditor.DEFAULT_ADVANCED</code></td><td>The control ids on the Advanced tab by default.</td></tr>
         <tr><td><code>KStyleEditor.DEFAULT_SWATCHES</code></td><td>The built-in palette: 24 <code>[value, label]</code> pairs, the colours a colour field opens when <code>swatches</code> is <code>null</code>.</td></tr>
@@ -430,6 +430,17 @@ editor.on('tab', function (name) { … });</code></pre>
       Dark values apply automatically under <code>prefers-color-scheme: dark</code>, and always under
       <code>[data-kse-theme="dark"]</code> (set by the <code>theme</code> option). To theme dark mode, override
       inside both.
+    </p>
+    <h3>The colour palette</h3>
+    <p>
+      A colour field's palette floats above the page, in the browser's top layer (a
+      <code>popover</code>), so an editor in a narrow scrolling panel or a modal opens it on top of
+      that container, not inside it. It opens below the chip, or above when there is more room
+      there; if neither side has room it is shortened and scrolls. It is kept 8px inside the right edge
+      of the window, follows the chip when anything scrolls, and closes when the chip scrolls out of
+      sight. It stays inside the editor in the page, so your <code>--kse-*</code> overrides and the
+      dark theme apply to it as to the rest, and <code>destroy()</code> removes it. It is placed only
+      through the CSSOM, so it works under a strict Content-Security-Policy.
     </p>
   </section>
 
@@ -574,6 +585,12 @@ result = KStyleEditor.clean(row.css, allow: ["color", "border-*"])
       uses custom properties and, for narrow editors, container queries (without them the layout still
       wraps, a little less tidily).
     </p>
+    <p>
+      The colour palette uses <code>popover</code> (Chrome and Edge 114, Safari 17, Firefox 125). An
+      older browser gets a <code>position: fixed</code> palette instead, which still floats over a
+      scrolling container, but is clipped by an ancestor that has both a <code>transform</code> and
+      <code>overflow</code> other than visible.
+    </p>
   </section>
 
   </main>
@@ -581,7 +598,7 @@ result = KStyleEditor.clean(row.css, allow: ["color", "border-*"])
 
 <footer class="site-footer">
   <div class="wrap">
-    kStyleEditor 0.1.2 — MIT licensed.
+    kStyleEditor 0.1.3 — MIT licensed.
     <a href="https://github.com/KAStrack/kStyleEditor">Source on GitHub</a>.
   </div>
 </footer>

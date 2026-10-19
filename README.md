@@ -4,7 +4,7 @@ A zero-dependency visual CSS editor that takes over a `<textarea>`, and server-s
 
 **[Live demo and documentation →](https://kastrack.github.io/kStyleEditor/)**
 
-**Current version: 0.1.2**
+**Current version: 0.1.3**
 
 ---
 
@@ -157,6 +157,8 @@ KStyleEditor.attach('#css', {
 
 The element preview works under a strict Content-Security-Policy (`style-src` without `'unsafe-inline'`): it writes only through the CSSOM, never the `style` attribute.
 
+The colour palette floats in the browser's top layer (`popover`), so in a narrow scrolling panel or a modal it opens on top of the container rather than inside it. It flips above the chip when there is more room there, shrinks and scrolls when neither side fits, keeps 8px from the window's right edge, follows the chip as things scroll, and still takes the editor's theme. Browsers without `popover` get a `position: fixed` palette instead.
+
 ### Inherited values
 
 A property the editor does not set still has a value on the page, such as the theme's colour. `inherited` lets each field show it instead of looking empty:
@@ -234,7 +236,7 @@ npm test                 # JS SDK conformance (node:test)
 npm run test:php         # PHP SDK conformance
 npm run test:python      # Python SDK conformance
 npm run test:browser     # builds, then drives the editor and the site in Chromium (Playwright);
-                         # the strict-CSP checks also run in WebKit and Firefox
+                         # the strict-CSP and floating-palette checks also run in WebKit and Firefox
 npm run test:all         # all of the above
 ```
 

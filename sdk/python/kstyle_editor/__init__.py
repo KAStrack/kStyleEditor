@@ -13,7 +13,7 @@ import re
 
 __all__ = ["DEFAULT_ALLOW", "VERSION", "parse", "stringify", "clean", "sanitize"]
 
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 # Every property the built-in controls can write, plus the common shorthands
 # people type into the Code tab.

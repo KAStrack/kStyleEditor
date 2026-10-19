@@ -1,5 +1,5 @@
 /*!
- * kStyleEditor 0.1.2 — editor stylesheet
+ * kStyleEditor 0.1.3 — editor stylesheet
  * MIT Licence. https://github.com/KAStrack/kStyleEditor
  *
  * Every colour and size is a --kse-* custom property on .kse, so a theme is a
@@ -45,8 +45,8 @@
   text-align: left;
 }
 
-/* No overflow: hidden on .kse (it would clip the colour palette), so the
-   first strip rounds its own top corners instead. */
+/* No overflow: hidden on .kse (in a browser without popover it would clip
+   the colour palette), so the first strip rounds its own top corners instead. */
 .kse > :first-child { border-radius: calc(var(--kse-radius) - 1px) calc(var(--kse-radius) - 1px) 0 0; }
 
 @media (prefers-color-scheme: dark) {
@@ -407,21 +407,29 @@
 
 .kse .kse-colour-text { width: 150px; font-family: var(--kse-mono); font-size: 0.9em; }
 
+/* The palette floats: in the top layer (popover) where the browser has one,
+   else fixed with a high z-index. Script sets top, left and, when it must
+   scroll, max-height. These also undo the browser's own popover styles. */
 .kse-palette {
-  position: absolute;
-  top: calc(100% + 6px);
+  position: fixed;
+  inset: auto;
+  top: 0;
   left: 0;
-  z-index: 30;
+  z-index: 2147483000;
+  margin: 0;
   width: max-content;
-  max-width: min(312px, calc(100vw - 32px));
+  height: auto;
+  max-width: min(312px, calc(100vw - 16px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px;
+  color: var(--kse-fg);
   background: var(--kse-bg);
   border: 1px solid var(--kse-border);
   border-radius: var(--kse-radius);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
 }
-
-.kse-palette[data-up="true"] { top: auto; bottom: calc(100% + 6px); }
 
 .kse-palette-grid {
   display: grid;

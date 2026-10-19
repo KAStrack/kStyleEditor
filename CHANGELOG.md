@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-10-18
+
+### Fixed
+
+- The colour palette now floats above whatever holds the editor. It was absolutely positioned inside the colour field, so in a narrow scrolling panel or a modal's scrolling body it opened inside that container. The container grew to hold it, people had to scroll to reach its bottom row, and near the container's right edge it was cut off. It only flipped upwards when the window had no room below, and it never moved sideways. It now opens in the browser's top layer (`popover="manual"`), where no ancestor's `overflow` or `transform` can clip or move it, placed from the chip:
+  - below it, or above when there is not room below and more above;
+  - if neither side fits, shortened to the larger side, and it scrolls;
+  - lined up with the chip but kept 8px inside the window's right edge;
+  - re-placed whenever anything scrolls or the window resizes, and closed when the chip scrolls out of sight.
+
+  It stays inside the editor in the DOM, so the `--kse-*` tokens, `data-kse-theme` and dark mode still apply, `destroy()` still removes it, and keyboard use, Escape, outside clicks and tabbing out work as before. It is placed through the CSSOM only, so a strict CSP allows it. Browsers without `popover` get a `position: fixed` palette, corrected for a transformed ancestor.
+
 ## [0.1.2] - 2026-10-18
 
 ### Added
@@ -35,6 +47,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The sanitiser, `KStyleCss` (`parse`, `stringify`, `clean`, `sanitize`), with ports for PHP, Python, C#, Go and Ruby, held to one set of conformance cases.
 - The documentation site in `docs/`, with a landing page, a playground and an API reference.
 
+[0.1.3]: https://github.com/KAStrack/kStyleEditor/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/KAStrack/kStyleEditor/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/KAStrack/kStyleEditor/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/KAStrack/kStyleEditor/releases/tag/v0.1.0
