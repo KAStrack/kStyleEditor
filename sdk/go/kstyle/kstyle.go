@@ -16,7 +16,7 @@ import (
 )
 
 // Version is the SDK version.
-const Version = "0.1.1"
+const Version = "0.1.2"
 
 // Declaration is one CSS declaration.
 type Declaration struct {

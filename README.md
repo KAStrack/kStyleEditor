@@ -4,7 +4,7 @@ A zero-dependency visual CSS editor that takes over a `<textarea>`, and server-s
 
 **[Live demo and documentation →](https://kastrack.github.io/kStyleEditor/)**
 
-**Current version: 0.1.1**
+**Current version: 0.1.2**
 
 ---
 
@@ -143,9 +143,10 @@ Add your own with `controls` (one editor) or `KStyleEditor.registerControl()` (a
 | `theme` | `null` | `'light'` or `'dark'` to pin; `null` follows the page. |
 | `readOnly` | `false` | Show, do not edit. |
 | `labels` | `null` | Override interface text. See [Labels](#labels). |
+| `inherited` | `null` | What each unset property shows, e.g. a theme's values: `{ property: value }` or `function (property)`. Shown, never saved. See [Inherited values](#inherited-values). |
 | `onChange` | `null` | `function (css, payload)` after every change. |
 
-Methods: `getCss()`, `getDeclarations()`, `setCss()`, `get()`, `set()`, `clear()`, `sync()`, `setTab()`, `setPreview()`, `setSelector()`, `setTheme()`, `on()`, `off()`, `destroy()`. Statics: `attach()`, `attachAll()`, `get()`, `detach()`, `registerControl()`, `registerFieldType()`, `controls()`, and the values `VERSION`, `DEFAULT_BASIC`, `DEFAULT_ADVANCED`, `DEFAULT_SWATCHES`, `DEFAULT_FONTS`, `DEFAULT_LABELS`, `DEFAULTS` and `SECTIONS`. `DEFAULT_SWATCHES` and `DEFAULT_FONTS` are copies, so your own colours or fonts can go first:
+Methods: `getCss()`, `getDeclarations()`, `setCss()`, `get()`, `set()`, `clear()`, `sync()`, `setTab()`, `setPreview()`, `setSelector()`, `setTheme()`, `setInherited()`, `on()`, `off()`, `destroy()`. Statics: `attach()`, `attachAll()`, `get()`, `detach()`, `registerControl()`, `registerFieldType()`, `controls()`, and the values `VERSION`, `DEFAULT_BASIC`, `DEFAULT_ADVANCED`, `DEFAULT_SWATCHES`, `DEFAULT_FONTS`, `DEFAULT_LABELS`, `DEFAULTS` and `SECTIONS`. `DEFAULT_SWATCHES` and `DEFAULT_FONTS` are copies, so your own colours or fonts can go first:
 
 ```js
 KStyleEditor.attach('#css', {
@@ -155,6 +156,21 @@ KStyleEditor.attach('#css', {
 ```
 
 The element preview works under a strict Content-Security-Policy (`style-src` without `'unsafe-inline'`): it writes only through the CSSOM, never the `style` attribute.
+
+### Inherited values
+
+A property the editor does not set still has a value on the page, such as the theme's colour. `inherited` lets each field show it instead of looking empty:
+
+```js
+var editor = KStyleEditor.attach('#theme-css', {
+  controls: [{ id: 'primary', label: 'Main colour', fields: [{ type: 'color', prop: '--brand-primary' }] }],
+  basic: ['primary'], advanced: false,
+  inherited: { '--brand-primary': '#1f2933' }
+});
+editor.setInherited(otherTheme);   // another theme picked: redraw, CSS untouched
+```
+
+An unset colour shows its chip in the inherited colour with a dashed ring (`data-inherited="true"`, `--kse-inherited`) and offers *Use inherited (#1f2933)*. A length shows the number as its placeholder, with its unit in the unit list. A select or font list's empty option reads *Default (600 Semi-bold)*. Text and range fields show it as a placeholder. Box, stroke, shadow and functions fields show their pieces of it, and image fields show it only in their raw text box. Screen readers hear *Inherited: …*. The inherited value is never written to the textarea, `getCss()`, `get()` or the Code tab. Choosing the same value sets it explicitly; *Default* goes back to inheriting.
 
 Full reference: [docs](https://kastrack.github.io/kStyleEditor/docs.html).
 
@@ -173,7 +189,7 @@ KStyleEditor.attach('#css', {
 });
 ```
 
-An option you do not name keeps its own label. `KStyleEditor.controls()` lists every control, with each field's `options`.
+An option you do not name keeps its own label. `KStyleEditor.controls()` lists every control, with each field's `options`. The [inherited value](#inherited-values) texts are `inherited`, `useInherited` and `inheritedOption`, with `{value}` standing for the value.
 
 ---
 
@@ -218,7 +234,7 @@ npm test                 # JS SDK conformance (node:test)
 npm run test:php         # PHP SDK conformance
 npm run test:python      # Python SDK conformance
 npm run test:browser     # builds, then drives the editor and the site in Chromium (Playwright);
-                         # the strict-CSP preview check also runs in WebKit and Firefox
+                         # the strict-CSP checks also run in WebKit and Firefox
 npm run test:all         # all of the above
 ```
 

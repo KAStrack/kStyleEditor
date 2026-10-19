@@ -12,7 +12,7 @@
 
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.1</span></a>
+    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.2</span></a>
     <nav class="site-nav">
       <a href="./">Home</a>
       <a href="demo.html">Playground</a>
@@ -34,6 +34,7 @@
       <li><a href="#controls">Controls</a></li>
       <li><a href="#custom-controls">Custom controls</a></li>
       <li><a href="#preview">Preview</a></li>
+      <li><a href="#inherited">Inherited values</a></li>
       <li><a href="#methods">Methods</a></li>
       <li><a href="#events">Events</a></li>
       <li><a href="#theming">Theming</a></li>
@@ -142,6 +143,7 @@ border: 1px solid #94a3b8;</code></pre>
         <tr><td><code>theme</code></td><td><code>null</code></td><td><code>null</code> follows <code>prefers-color-scheme</code>; <code>'light'</code> or <code>'dark'</code> pins it.</td></tr>
         <tr><td><code>readOnly</code></td><td><code>false</code></td><td>Show everything, change nothing.</td></tr>
         <tr><td><code>labels</code></td><td><code>null</code></td><td>Override any interface text. See <a href="#labels">Labels</a>.</td></tr>
+        <tr><td><code>inherited</code></td><td><code>null</code></td><td>What each property shows while the editor does not set it, such as the value a theme gives it: <code>{ property: value }</code> or <code>function (property) { return value; }</code>. Shown only, never saved. See <a href="#inherited">Inherited values</a>.</td></tr>
         <tr><td><code>onChange</code></td><td><code>null</code></td><td><code>function (css, payload)</code>, called after every change. Same as <code>on('change')</code>.</td></tr>
       </tbody>
     </table>
@@ -222,6 +224,10 @@ KStyleEditor.attach('#css', { basic: ['accent', 'color', 'padding'] });</code></
       </tbody>
     </table>
     <p>
+      Every type except <code>image</code> shows <a href="#inherited">inherited values</a>. An
+      <code>image</code> field shows one only in its raw text box, when it has fallen back to it.
+    </p>
+    <p>
       Every field also takes <code>label</code> (a small title above it, needed when a control has more
       than one field) and <code>key</code> (its name for <a href="#labels">labels</a>, default the property).
     </p>
@@ -231,6 +237,11 @@ KStyleEditor.attach('#css', { basic: ['accent', 'color', 'padding'] });</code></
       <code>(spec, ctx)</code> and returns <code>{ el, props, refresh() }</code>: <code>props</code> lists the
       properties it owns, <code>ctx.get(prop)</code> reads a value, and <code>ctx.commit(props, declarations)</code>
       replaces the owned properties. Look at <code>FIELD_TYPES.text</code> in the source for a short one.
+    </p>
+    <p>
+      To show <a href="#inherited">inherited values</a>, read <code>ctx.inherited(prop)</code> (the value, or
+      <code>''</code>) in <code>refresh()</code>, and also return an <code>inherit()</code> method that redraws
+      just that, which <code>setInherited()</code> calls. Never commit what it returns.
     </p>
   </section>
 
@@ -257,6 +268,61 @@ KStyleEditor.attach('#css', { basic: ['accent', 'color', 'padding'] });</code></
     </p>
   </section>
 
+  <section id="inherited">
+    <h2>Inherited values</h2>
+    <p>
+      A property the editor does not set still has a value on the page: the theme's colour, the browser's
+      font size. Without help, the field for it looks empty. <code>inherited</code> tells the editor what
+      those values are, so each field can show it:
+    </p>
+<pre><code>var editor = KStyleEditor.attach('#theme-css', {
+  controls: [
+    { id: 'primary', label: 'Main colour', fields: [{ type: 'color', prop: '--brand-primary' }] },
+    { id: 'size', label: 'Text size', fields: [{ type: 'length', prop: '--brand-size' }] },
+    { id: 'weight', label: 'Label weight', fields: [{ type: 'select', prop: '--brand-weight',
+      options: [['400', '400 Normal'], ['600', '600 Semi-bold'], ['700', '700 Bold']] }] }
+  ],
+  basic: ['primary', 'size', 'weight'],
+  advanced: false,
+  inherited: { '--brand-primary': '#1f2933', '--brand-size': '16px', '--brand-weight': '600' }
+});
+
+// Another theme picked: show its values. The saved CSS is not touched.
+editor.setInherited(function (property) { return otherTheme[property] || ''; });</code></pre>
+    <p>
+      Give an object keyed by property (custom properties exactly as written), or a function that takes a
+      property and returns its value or <code>''</code>. <code>setInherited()</code> replaces either and redraws
+      the fields; <code>setInherited(null)</code> turns it off.
+    </p>
+    <h3>What each field shows</h3>
+    <p>Only while its property is not set. With nothing inherited, a field looks as it always has.</p>
+    <table>
+      <thead><tr><th>Field</th><th>Shows</th></tr></thead>
+      <tbody>
+        <tr><td><code>color</code></td><td>The chip in the inherited colour with a dashed ring (<code>data-inherited="true"</code>, coloured by <code>--kse-inherited</code>); the colour as the text box's placeholder; <em>Use inherited (#1f2933)</em> in place of <em>Default</em> in the palette. The system picker starts from it.</td></tr>
+        <tr><td><code>length</code></td><td>The number as the placeholder, and its unit in the unit list, so a number typed over it keeps that unit and the arrow keys step from it. A keyword (<code>auto</code>) is the placeholder.</td></tr>
+        <tr><td><code>select</code>, <code>font</code></td><td>The empty option reads <em>Default (600 Semi-bold)</em>: the matching option's text, or the value as it is. A font stack matches whatever its spacing or quotes.</td></tr>
+        <tr><td><code>text</code></td><td>The placeholder, unless the field has its own <code>placeholder</code>.</td></tr>
+        <tr><td><code>range</code></td><td>The placeholder of its number box. The slider stays where it is.</td></tr>
+        <tr><td><code>box</code>, <code>stroke</code>, <code>shadow</code>, <code>functions</code></td><td>Each part shows its piece of the value: each side, the width, style and colour, each length, each function's argument.</td></tr>
+        <tr><td><code>image</code></td><td>Nothing, except in its raw text box.</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Any field showing its raw text box (a value it cannot take apart) has the whole inherited value as that
+      box's placeholder. Each input that shows a value is also described to screen readers as
+      <em>Inherited: #1f2933</em>, through <code>aria-describedby</code>.
+    </p>
+    <h3>It is never saved</h3>
+    <p>
+      An inherited value is not in the textarea, <code>getCss()</code>, <code>getDeclarations()</code>,
+      <code>get()</code>, the Code tab or the preview, and neither attaching nor <code>setInherited()</code>
+      rewrites the textarea. Choosing a value equal to the inherited one does set it: that pins it, so it
+      no longer follows the theme. <em>Default</em> (or <em>Use inherited</em>, or emptying the box) is the way
+      back to inheriting.
+    </p>
+  </section>
+
   <section id="methods">
     <h2>Methods</h2>
     <h3>Static</h3>
@@ -277,7 +343,7 @@ KStyleEditor.attach('#css', { basic: ['accent', 'color', 'padding'] });</code></
     <table>
       <thead><tr><th>Value</th><th>Holds</th></tr></thead>
       <tbody>
-        <tr><td><code>KStyleEditor.VERSION</code></td><td>The version, e.g. <code>'0.1.1'</code>.</td></tr>
+        <tr><td><code>KStyleEditor.VERSION</code></td><td>The version, e.g. <code>'0.1.2'</code>.</td></tr>
         <tr><td><code>KStyleEditor.DEFAULT_BASIC</code></td><td>The control ids on the Basic tab by default.</td></tr>
         <tr><td><code>KStyleEditor.DEFAULT_ADVANCED</code></td><td>The control ids on the Advanced tab by default.</td></tr>
         <tr><td><code>KStyleEditor.DEFAULT_SWATCHES</code></td><td>The built-in palette: 24 <code>[value, label]</code> pairs, the colours a colour field opens when <code>swatches</code> is <code>null</code>.</td></tr>
@@ -312,6 +378,7 @@ KStyleEditor.attach('#css', { basic: ['accent', 'color', 'padding'] });</code></
         <tr><td><code>setPreview(target)</code></td><td>Move the live preview to another element, or <code>false</code> to stop.</td></tr>
         <tr><td><code>setSelector(selector)</code></td><td>Change the wrapping selector (or <code>null</code>) and re-save.</td></tr>
         <tr><td><code>setTheme(theme)</code></td><td><code>'light'</code>, <code>'dark'</code> or <code>null</code>.</td></tr>
+        <tr><td><code>setInherited(values)</code></td><td>Replace the <a href="#inherited">inherited values</a> (an object, a function, or <code>null</code>) and redraw the fields. The saved CSS is not touched.</td></tr>
         <tr><td><code>on(event, fn)</code> / <code>off(event, fn?)</code></td><td>See <a href="#events">Events</a>.</td></tr>
         <tr><td><code>destroy()</code></td><td>Remove the editor, show the textarea, restore the preview element. Safe to call twice.</td></tr>
       </tbody>
@@ -353,6 +420,7 @@ editor.on('tab', function (name) { … });</code></pre>
         <tr><td><code>--kse-focus</code></td><td>Focus ring</td></tr>
         <tr><td><code>--kse-warn</code>, <code>--kse-warn-bg</code></td><td>The Code tab's notes</td></tr>
         <tr><td><code>--kse-check-a</code>, <code>--kse-check-b</code></td><td>The transparency checkerboard</td></tr>
+        <tr><td><code>--kse-inherited</code></td><td>The dashed ring on a colour chip showing an <a href="#inherited">inherited</a> colour</td></tr>
         <tr><td><code>--kse-radius</code>, <code>--kse-radius-sm</code></td><td>Corner radius of the editor and of inputs</td></tr>
         <tr><td><code>--kse-font</code>, <code>--kse-font-size</code>, <code>--kse-mono</code></td><td>Type</td></tr>
         <tr><td><code>--kse-label-width</code>, <code>--kse-control-h</code></td><td>Width of the title column; height of inputs</td></tr>
@@ -395,6 +463,13 @@ editor.on('tab', function (name) { … });</code></pre>
       by the whole stack, e.g. <code>'Georgia, "Times New Roman", serif'</code>. To list every option there is
       to translate, read <code>KStyleEditor.controls()</code>: each field's <code>options</code> holds strings
       and <code>[value, label]</code> pairs, and a font field's come from the <code>fonts</code> option.
+    </p>
+    <p>
+      Three labels show <a href="#inherited">inherited values</a>, with <code>{value}</code> standing for the
+      value (or, in <code>inheritedOption</code>, the matching option's text):
+      <code>inherited: 'Inherited: {value}'</code> (heard by screen readers),
+      <code>useInherited: 'Use inherited ({value})'</code> (the palette button) and
+      <code>inheritedOption: 'Default ({value})'</code> (a list's empty option).
     </p>
   </section>
 
@@ -506,7 +581,7 @@ result = KStyleEditor.clean(row.css, allow: ["color", "border-*"])
 
 <footer class="site-footer">
   <div class="wrap">
-    kStyleEditor 0.1.1 — MIT licensed.
+    kStyleEditor 0.1.2 — MIT licensed.
     <a href="https://github.com/KAStrack/kStyleEditor">Source on GitHub</a>.
   </div>
 </footer>

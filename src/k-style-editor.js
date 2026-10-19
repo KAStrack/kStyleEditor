@@ -1,5 +1,5 @@
 /*!
- * kStyleEditor 0.1.1
+ * kStyleEditor 0.1.2
  * A zero-dependency visual CSS editor that takes over a <textarea>.
  * MIT Licence. https://github.com/KAStrack/kStyleEditor
  *
@@ -18,7 +18,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function (KStyleCss) {
   'use strict';
 
-  var VERSION = '0.1.1';
+  var VERSION = '0.1.2';
 
   // The property on a <textarea> that points back at its editor. It is how
   // get() and detach() find an instance whose attach() return value was lost,
@@ -161,6 +161,9 @@
     preview: 'Preview',
     previewText: 'The quick brown fox jumps over the lazy dog.',
     unset: 'Default',
+    inherited: 'Inherited: {value}',
+    useInherited: 'Use inherited ({value})',
+    inheritedOption: 'Default ({value})',
     custom: 'Custom\u2026',
     customHint: 'Custom value',
     reset: 'Reset',
@@ -520,6 +523,11 @@
     readOnly: false,
     /* Override any of DEFAULT_LABELS. */
     labels: null,
+    /* What each property shows while the editor does not set it, e.g. the
+       value a theme gives it: { property: value } (custom properties keyed
+       as written) or a function (property) => value. Display only: it is
+       never saved. setInherited() replaces it. */
+    inherited: null,
     /* Called with (css, payload) after every change. */
     onChange: null
   };
@@ -530,6 +538,29 @@
   // { el, set(value) → bool, get() → string }; set() returns false when it
   // cannot show the value, and the field falls back to a plain text box so
   // nothing the user typed elsewhere is lost or rewritten.
+
+  // A visually hidden "Inherited: ..." that the inputs point at with
+  // aria-describedby, so a screen reader hears what the placeholder shows.
+  // It goes in beside the first input once that is in the page (a <select>
+  // cannot hold it), and is emptied rather than removed.
+  function inheritNote(targets, L) {
+    var note = null;
+    return function (value) {
+      if (!value && !note) return;
+      if (!note) note = el('span', 'kse-visually-hidden', { id: nextId() });
+      if (!note.parentNode && targets[0].parentNode) targets[0].parentNode.insertBefore(note, targets[0].nextSibling);
+      note.textContent = value ? fill(L.inherited, { value: value }) : '';
+      targets.forEach(function (t) {
+        if (value) t.setAttribute('aria-describedby', note.id);
+        else t.removeAttribute('aria-describedby');
+      });
+    };
+  }
+
+  function placeholder(input, text) {
+    if (text) input.placeholder = text;
+    else input.removeAttribute('placeholder');
+  }
 
   function lengthWidget(ctx, opts) {
     var units = opts.units || ctx.options.units || LENGTH;
@@ -557,18 +588,38 @@
       wrap.appendChild(unit);
     }
 
+    // What shows while nothing is set (the `inherited` option): its number
+    // as the placeholder, and its unit in the unit select so a number typed
+    // over it keeps that unit. Never part of get().
+    var inh = { text: '', num: '', unit: null };
+    var describe = inheritNote([num], ctx.labels);
+
     function isKeyword(v) { return indexOf(keywords, v) !== -1; }
+
+    function hasUnit(u) {
+      for (var i = 0; i < unit.options.length; i++) if (unit.options[i].value === u) return true;
+      return false;
+    }
+
+    // The bare number only while the unit beside it is the inherited one;
+    // otherwise the whole value, so "16" never sits next to "em".
+    function hint() {
+      if (!inh.text) return opts.placeholder || '';
+      if (inh.num !== '' && (inh.unit === null || !unit || unit.value === inh.unit)) return inh.num;
+      return inh.text;
+    }
 
     function sync() {
       var kw = unit && isKeyword(unit.value);
       num.disabled = !!(kw || ctx.readOnly);
       wrap.setAttribute('data-keyword', kw ? 'true' : 'false');
       if (kw) num.value = '';
+      num.placeholder = hint();
     }
 
     function addUnit(u) {
       if (!unit) return false;
-      for (var i = 0; i < unit.options.length; i++) if (unit.options[i].value === u) return true;
+      if (hasUnit(u)) return true;
       unit.insertBefore(el('option', null, { value: u, text: u }), unit.firstChild.nextSibling || null);
       return true;
     }
@@ -582,7 +633,9 @@
       var u = unit ? unit.value : units[0];
       var step = opts.step || (/^(em|rem|turn|)$/.test(u) ? 0.1 : 1);
       if (e.shiftKey) step *= 10;
-      var n = parseFloat(num.value) || 0;
+      var n = parseFloat(num.value);
+      // From an empty box, step from the inherited number it shows.
+      if (isNaN(n)) n = trim(num.value) === '' && inh.num !== '' && num.placeholder === inh.num ? parseFloat(inh.num) : 0;
       num.value = tidyNumber(n + (e.key === 'ArrowUp' ? step : -step));
       opts.onChange();
     });
@@ -602,7 +655,7 @@
         v = trim(v);
         if (v === '') {
           num.value = '';
-          if (unit) unit.value = lastUnit;
+          if (unit) unit.value = inh.unit !== null ? inh.unit : lastUnit;
           sync();
           return true;
         }
@@ -623,6 +676,22 @@
         if (n === '' || isNaN(parseFloat(n)) || !NUMBER_RE.test(n)) return '';
         var u = unit ? unit.value : units[0];
         return parseFloat(n) === 0 && u !== '%' && opts.zeroUnitless !== false ? '0' : n + u;
+      },
+      inherit: function (v) {
+        v = trim(v);
+        if (v === inh.text) return;
+        inh = { text: v, num: '', unit: null };
+        var m = NUMBER_RE.exec(v);
+        if (m) {
+          var u = m[2].toLowerCase();
+          var zero = u === '' && parseFloat(m[1]) === 0;
+          if (!unit) { if (u === units[0] || zero) inh.num = m[1]; }
+          else if (zero && indexOf(units, '') === -1) inh.num = m[1];
+          else if (hasUnit(u)) { inh.num = m[1]; inh.unit = u; }
+        }
+        if (unit && inh.unit !== null && trim(num.value) === '' && !isKeyword(unit.value)) unit.value = inh.unit;
+        describe(v);
+        sync();
       },
       disable: function (b) { num.disabled = b; if (unit) unit.disabled = b; }
     };
@@ -678,11 +747,20 @@
     actions.appendChild(clear);
     pop.appendChild(actions);
 
+    // The colour this property has while nothing is set here (the
+    // `inherited` option). An empty field draws its chip in it, marked
+    // data-inherited; it is never written.
+    var inherited = '';
+    var describe = inheritNote([text, chip], L);
+
     function show(v) {
-      var hex = toHex(v);
+      var shown = v || inherited;
+      var hex = toHex(shown);
       wrap.setAttribute('data-known', hex ? 'true' : 'false');
-      wrap.style.setProperty('--kse-current', v && (hex || /^transparent$/i.test(v)) ? v : 'transparent');
+      wrap.style.setProperty('--kse-current', shown && (hex || /^transparent$/i.test(shown)) ? shown : 'transparent');
       wrap.setAttribute('data-empty', v ? 'false' : 'true');
+      if (!v && inherited) wrap.setAttribute('data-inherited', 'true');
+      else wrap.removeAttribute('data-inherited');
     }
 
     function choose(v) {
@@ -692,10 +770,12 @@
       api.close(true);
     }
 
-    // Where the native picker starts: the colour set here, else whatever the
-    // preview element is showing for this property, else a friendly blue.
+    // Where the native picker starts: the colour set here, else the
+    // inherited one, else whatever the preview element is showing for this
+    // property, else a friendly blue.
     function startColour() {
-      return toHex(trim(text.value)) || toHex(ctx.computed ? ctx.computed(opts.prop) : '') || '#3b82f6';
+      return toHex(trim(text.value)) || toHex(inherited) ||
+        toHex(ctx.computed ? ctx.computed(opts.prop) : '') || '#3b82f6';
     }
 
     function place() {
@@ -798,6 +878,15 @@
       focus: text,
       set: function (v) { text.value = v; show(v); return true; },
       get: function () { return trim(text.value); },
+      inherit: function (v) {
+        v = trim(v);
+        if (v === inherited) return;
+        inherited = v;
+        text.placeholder = v || L.unset;
+        clear.textContent = v ? fill(L.useInherited, { value: v }) : L.unset;
+        describe(v);
+        show(trim(text.value));
+      },
       disable: function (b) {
         if (b) api.close(false);
         chip.disabled = b;
@@ -823,9 +912,19 @@
     var select = el('select', 'kse-select', { id: opts.id || null, 'aria-label': opts.ariaLabel || null });
     var options = normaliseOptions(opts.options);
     var texts = opts.labels || {};
-    select.appendChild(el('option', null, { value: '', text: opts.unsetLabel || ctx.labels.unset }));
+    var unsetText = opts.unsetLabel || ctx.labels.unset;
+    var blank = el('option', null, { value: '', text: unsetText });
+    var inherited = '';
+    var describe = inheritNote([select], ctx.labels);
+    function textOf(o) {
+      return Object.prototype.hasOwnProperty.call(texts, o.value) && texts[o.value] ? texts[o.value] : o.label;
+    }
+    // Font stacks are written many ways: ignore case, quote style and the
+    // spaces after commas.
+    function loose(v) { return String(v).toLowerCase().replace(/\s*,\s*/g, ',').replace(/'/g, '"'); }
+    select.appendChild(blank);
     options.forEach(function (o) {
-      var text = Object.prototype.hasOwnProperty.call(texts, o.value) && texts[o.value] ? texts[o.value] : o.label;
+      var text = textOf(o);
       var node = el('option', null, { value: o.value, text: text });
       if (opts.styleOptions) node.style.fontFamily = o.value;
       select.appendChild(node);
@@ -848,6 +947,20 @@
         return false;
       },
       get: function () { return select.value === CUSTOM ? '' : select.value; },
+      // The empty option names what it falls back to: "Default (700 Bold)",
+      // with the matching option's text, else the value as it is.
+      inherit: function (v) {
+        v = trim(v);
+        if (v === inherited) return;
+        inherited = v;
+        var match = null;
+        var i;
+        for (i = 0; i < options.length && !match; i++) if (String(options[i].value) === v) match = options[i];
+        for (i = 0; i < options.length && !match; i++) if (loose(options[i].value) === loose(v)) match = options[i];
+        var label = match ? textOf(match) : v;
+        blank.textContent = v ? fill(ctx.labels.inheritedOption, { value: label }) : unsetText;
+        describe(v ? label : '');
+      },
       disable: function (b) { select.disabled = b; }
     };
   }
@@ -906,14 +1019,24 @@
     raw.addEventListener('input', function () { write(raw.value); });
     raw.addEventListener('change', function () { if (widget.set(trim(raw.value))) showNormal(); });
 
+    var describeRaw = inheritNote([raw], ctx.labels);
+    function inherit() {
+      var v = ctx.inherited(spec.prop);
+      if (widget.inherit) widget.inherit(v);
+      placeholder(raw, v);
+      describeRaw(v);
+    }
+
     return {
       el: shell.wrap,
       props: [spec.prop],
       refresh: function () {
+        inherit();
         var v = ctx.get(spec.prop);
         if (widget.set(v)) showNormal();
         else showRaw(v);
       },
+      inherit: inherit,
       disable: function (b) { widget.disable(b); raw.disabled = b; }
     };
   }
@@ -957,10 +1080,13 @@
         wrap.appendChild(dl);
       }
       input.addEventListener('input', o.onChange);
+      var describe = inheritNote([input], ctx.labels);
       return {
         el: wrap,
         set: function (v) { input.value = v; return true; },
         get: function () { return input.value; },
+        // The field's own placeholder, when it has one, wins.
+        inherit: function (v) { input.placeholder = spec.placeholder || v; describe(v); },
         disable: function (b) { input.disabled = b; }
       };
     });
@@ -978,6 +1104,7 @@
       var num = el('input', 'kse-num', { type: 'text', inputmode: 'decimal', id: o.id, 'aria-label': o.ariaLabel, placeholder: String(max) });
       wrap.appendChild(slider);
       wrap.appendChild(num);
+      var describe = inheritNote([num], ctx.labels);
       function mark() { wrap.setAttribute('data-empty', trim(num.value) === '' ? 'true' : 'false'); }
       slider.addEventListener('input', function () { num.value = tidyNumber(slider.value); mark(); o.onChange(); });
       num.addEventListener('input', function () {
@@ -1000,6 +1127,8 @@
           var n = trim(num.value);
           return n === '' || isNaN(parseFloat(n)) ? '' : tidyNumber(n);
         },
+        // Only the number box shows it; the thumb stays where it is.
+        inherit: function (v) { num.placeholder = v || String(max); describe(v); },
         disable: function (b) { slider.disabled = b; num.disabled = b; }
       };
     });
@@ -1031,10 +1160,22 @@
     raw.addEventListener('input', function () { write(raw.value); });
     raw.addEventListener('change', function () { if (parts.read()) shell.wrap.removeAttribute('data-raw'); });
 
+    // Each part shows its piece of the inherited value (parts.inherit); the
+    // raw box shows all of it.
+    var describeRaw = inheritNote([raw], ctx.labels);
+    function inherit() {
+      var v = ctx.inherited(parts.prop ? parts.prop() : spec.prop);
+      if (parts.inherit) parts.inherit();
+      placeholder(raw, v);
+      describeRaw(v);
+    }
+
     return {
       el: shell.wrap,
       props: owned,
+      inherit: inherit,
       refresh: function () {
+        inherit();
         if (parts.read()) {
           shell.wrap.removeAttribute('data-raw');
         } else {
@@ -1132,8 +1273,10 @@
         return v.join(' ');
       }
 
-      function current() {
-        var short = ctx.get(spec.prop);
+      // Each side's value from `get` (ctx.get, or ctx.inherited), or null
+      // when the shorthand cannot be taken apart.
+      function current(get) {
+        var short = get(spec.prop);
         var v = ['', '', '', ''];
         if (short) {
           if (short.indexOf('/') !== -1) return null;
@@ -1141,7 +1284,7 @@
           if (t.length > 4) return null;
           v = [t[0], t[1] || t[0], t[2] || t[0], t[3] || t[1] || t[0]];
         }
-        longhands.forEach(function (p, i) { var x = ctx.get(p); if (x) v[i] = x; });
+        longhands.forEach(function (p, i) { var x = get(p); if (x) v[i] = x; });
         return v;
       }
 
@@ -1150,7 +1293,7 @@
         focus: null,
         owned: function () { return owned; },
         read: function () {
-          var v = current();
+          var v = current(ctx.get);
           if (!v) return false;
           var same = v[0] === v[1] && v[1] === v[2] && v[2] === v[3];
           if (linked === null || !same) setLinked(same);
@@ -1161,8 +1304,14 @@
         rawValue: function () {
           var short = ctx.get(spec.prop);
           if (short) return short;
-          var v = current() || ['', '', '', ''];
+          var v = current(ctx.get) || ['', '', '', ''];
           return v.join(' ');
+        },
+        inherit: function () {
+          var v = current(ctx.inherited) || ['', '', '', ''];
+          // All shows one number when the sides agree, else the shorthand.
+          all.inherit(v[0] && v[1] && v[2] && v[3] ? minimise(v) : '');
+          inputs.forEach(function (w, i) { w.inherit(v[i]); });
         },
         value: function () { return ''; },
         disable: function (b) {
@@ -1232,6 +1381,21 @@
         sideNames.forEach(function (s) { tabButtons[s].setAttribute('data-set', ctx.get(propFor(s)) ? 'true' : 'false'); });
       }
 
+      // Width, style and colour, in any order, or null for anything else.
+      function parse(v) {
+        var out = { w: '', s: '', c: '' };
+        var tokens = v ? splitTop(v, ' ') : [];
+        for (var i = 0; i < tokens.length; i++) {
+          var t = tokens[i];
+          var lower = t.toLowerCase();
+          if (indexOf(LINE_STYLES, lower) !== -1 && !out.s) out.s = lower;
+          else if ((isLength(t) || /^(thin|medium|thick)$/i.test(t)) && !out.w) out.w = t;
+          else if (!out.c) out.c = t;
+          else return null;
+        }
+        return out;
+      }
+
       return {
         el: wrap,
         focus: width.focus,
@@ -1239,20 +1403,14 @@
         prop: function () { return propFor(side); },
         read: function () {
           markSides();
-          var v = ctx.get(propFor(side));
-          var w = '';
-          var s = '';
-          var c = '';
-          var tokens = v ? splitTop(v, ' ') : [];
-          for (var i = 0; i < tokens.length; i++) {
-            var t = tokens[i];
-            var lower = t.toLowerCase();
-            if (indexOf(LINE_STYLES, lower) !== -1 && !s) s = lower;
-            else if ((isLength(t) || /^(thin|medium|thick)$/i.test(t)) && !w) w = t;
-            else if (!c) c = t;
-            else return false;
-          }
-          return width.set(w) && style.set(s) && colour.set(c);
+          var p = parse(ctx.get(propFor(side)));
+          return !!p && width.set(p.w) && style.set(p.s) && colour.set(p.c);
+        },
+        inherit: function () {
+          var p = parse(ctx.inherited(propFor(side))) || { w: '', s: '', c: '' };
+          width.inherit(p.w);
+          style.inherit(p.s);
+          colour.inherit(p.c);
         },
         rawValue: function () { return ctx.get(propFor(side)); },
         value: function () {
@@ -1314,29 +1472,37 @@
         wrap.appendChild(lab);
       }
 
+      // One shadow as { lengths, colour, inset }, or null for anything else.
+      function parse(v) {
+        var out = { lengths: [], c: '', ins: false };
+        if (!v) return out;
+        if (splitTop(v, ',').length > 1 || /^none$/i.test(v)) return null;
+        var tokens = splitTop(v, ' ');
+        for (var i = 0; i < tokens.length; i++) {
+          var t = tokens[i];
+          if (/^inset$/i.test(t) && hasInset) out.ins = true;
+          else if (isLength(t)) out.lengths.push(t);
+          else if (!out.c) out.c = t;
+          else return null;
+        }
+        if (out.lengths.length < 2 || out.lengths.length > (spread ? 4 : 3)) return null;
+        return out;
+      }
+
       return {
         el: wrap,
         focus: x.focus,
         read: function () {
-          var v = ctx.get(spec.prop);
-          var lengths = [];
-          var c = '';
-          var ins = false;
-          if (v) {
-            if (splitTop(v, ',').length > 1 || /^none$/i.test(v)) return false;
-            var tokens = splitTop(v, ' ');
-            for (var i = 0; i < tokens.length; i++) {
-              var t = tokens[i];
-              if (/^inset$/i.test(t) && hasInset) ins = true;
-              else if (isLength(t)) lengths.push(t);
-              else if (!c) c = t;
-              else return false;
-            }
-            if (lengths.length < 2 || lengths.length > (spread ? 4 : 3)) return false;
-          }
-          if (inset) inset.checked = ins;
-          return x.set(lengths[0] || '') && y.set(lengths[1] || '') && blur.set(lengths[2] || '') &&
-            (!spr || spr.set(lengths[3] || '')) && colour.set(c);
+          var p = parse(ctx.get(spec.prop));
+          if (!p) return false;
+          if (inset) inset.checked = p.ins;
+          return x.set(p.lengths[0] || '') && y.set(p.lengths[1] || '') && blur.set(p.lengths[2] || '') &&
+            (!spr || spr.set(p.lengths[3] || '')) && colour.set(p.c);
+        },
+        inherit: function () {
+          var p = parse(ctx.inherited(spec.prop)) || parse('');
+          [x, y, blur, spr].forEach(function (w, i) { if (w) w.inherit(p.lengths[i] || ''); });
+          colour.inherit(p.c);
         },
         value: function () {
           var parts = [x.get(), y.get(), blur.get(), spr ? spr.get() : '', colour.get()];
@@ -1370,26 +1536,37 @@
         return w;
       });
 
+      // Each function's argument, in the order listed, or null.
+      function parse(v) {
+        v = trim(v);
+        var values = fns.map(function () { return ''; });
+        var last = -1;
+        var re = /^([a-z-]+)\(([^()]*)\)\s*/i;
+        while (v) {
+          var m = re.exec(v);
+          if (!m) return null;
+          var at = -1;
+          for (var i = 0; i < fns.length; i++) if (fns[i].name.toLowerCase() === m[1].toLowerCase()) at = i;
+          if (at <= last) return null;
+          values[at] = trim(m[2]);
+          last = at;
+          v = v.slice(m[0].length);
+        }
+        return values;
+      }
+
       return {
         el: wrap,
         focus: widgets.length ? widgets[0].focus : null,
         read: function () {
-          var v = trim(ctx.get(spec.prop));
-          var values = fns.map(function () { return ''; });
-          var last = -1;
-          var re = /^([a-z-]+)\(([^()]*)\)\s*/i;
-          while (v) {
-            var m = re.exec(v);
-            if (!m) return false;
-            var at = -1;
-            for (var i = 0; i < fns.length; i++) if (fns[i].name.toLowerCase() === m[1].toLowerCase()) at = i;
-            if (at <= last) return false;
-            values[at] = trim(m[2]);
-            last = at;
-            v = v.slice(m[0].length);
-          }
+          var values = parse(ctx.get(spec.prop));
+          if (!values) return false;
           for (var j = 0; j < fns.length; j++) if (!widgets[j].set(values[j])) return false;
           return true;
+        },
+        inherit: function () {
+          var values = parse(ctx.inherited(spec.prop)) || parse('');
+          widgets.forEach(function (w, j) { w.inherit(values[j]); });
         },
         value: function () {
           var out = [];
@@ -1692,6 +1869,9 @@
         return self.labels.options[def.id + '.' + (spec.key || spec.prop)] || null;
       },
       get: function (prop) { return self.get(prop); },
+      // What the property shows while it is not set (the `inherited`
+      // option), or ''. For display only: never commit it.
+      inherited: function (prop) { return self._inherited(prop); },
       // What the preview element currently shows for a property, or ''.
       computed: function (prop) {
         var t = self._previewEl;
@@ -1865,6 +2045,19 @@
 
   Editor.prototype._refreshFields = function () {
     this._fields.forEach(function (f) { f.refresh(); });
+  };
+
+  /** The `inherited` value for one property, as a trimmed string or ''. */
+  Editor.prototype._inherited = function (prop) {
+    var source = this.options.inherited;
+    var v = '';
+    if (!source || !prop) return '';
+    if (typeof source === 'function') {
+      try { v = source.call(this, prop); } catch (e) { report(e); }
+    } else if (typeof source === 'object' && Object.prototype.hasOwnProperty.call(source, prop)) {
+      v = source[prop];
+    }
+    return v === null || v === undefined || v === false ? '' : trim(v);
   };
 
   /** Push the model everywhere it shows: textarea, preview, code, badges. */
@@ -2088,6 +2281,16 @@
     }
     this._setPreviewTarget(target);
     this._applyPreview(this._output());
+    return this;
+  };
+
+  /**
+   * Replace the `inherited` values ({ property: value }, a function, or null)
+   * and redraw the fields. The saved CSS is not touched.
+   */
+  Editor.prototype.setInherited = function (inherited) {
+    this.options.inherited = inherited || null;
+    this._fields.forEach(function (f) { if (f.inherit) f.inherit(); });
     return this;
   };
 

@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-10-18
+
+### Added
+
+- The `inherited` option and `setInherited()`: what each property shows while the editor does not set it, such as the value a page's theme gives it, as `{ property: value }` (custom properties keyed as written) or `function (property)`. Before, every unset field looked empty: a colour showed a checkerboard and "Default", a length an empty box, a list its bare "Default". So a theme editor could not show people the colour they were about to change, only a blank. Now an unset colour field draws its chip in the inherited colour with a dashed ring (`data-inherited="true"`, coloured by the new `--kse-inherited` token), shows the colour as its placeholder, offers *Use inherited (#1f2933)* in the palette and starts the system picker from it. A length shows the number as its placeholder with its unit selected, so a number typed over it keeps that unit and the arrow keys step from it. A select or font list's empty option reads *Default (600 Semi-bold)*. Text and range fields show it as a placeholder, and box, stroke, shadow and functions fields show their part of it. Image fields ignore it except in their raw text box. It is display only: it is never written to the textarea, `getCss()`, `get()`, the Code tab or the preview, and neither attaching nor `setInherited()` rewrites the textarea. Choosing a value equal to the inherited one sets it explicitly, and *Default* goes back to inheriting.
+- Labels `inherited` ("Inherited: {value}", given to screen readers through `aria-describedby`), `useInherited` ("Use inherited ({value})") and `inheritedOption` ("Default ({value})").
+- `ctx.inherited(prop)` for custom field types, and an optional `inherit()` method on a field, which `setInherited()` calls.
+
 ## [0.1.1] - 2026-10-17
 
 ### Added
@@ -27,5 +35,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - The sanitiser, `KStyleCss` (`parse`, `stringify`, `clean`, `sanitize`), with ports for PHP, Python, C#, Go and Ruby, held to one set of conformance cases.
 - The documentation site in `docs/`, with a landing page, a playground and an API reference.
 
+[0.1.2]: https://github.com/KAStrack/kStyleEditor/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/KAStrack/kStyleEditor/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/KAStrack/kStyleEditor/releases/tag/v0.1.0

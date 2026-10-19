@@ -12,7 +12,7 @@
 
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.1</span></a>
+    <a class="brand" href="./">k<span>Style</span>Editor<span class="brand-version">0.1.2</span></a>
     <nav class="site-nav">
       <a href="./">Home</a>
       <a href="demo.html" aria-current="page">Playground</a>
@@ -78,6 +78,7 @@
         </select>
         <label class="opt" style="margin-top:10px"><input type="checkbox" id="opt-code" checked> Code tab</label>
         <label class="opt"><input type="checkbox" id="opt-swatches"> Brand palette instead of the default</label>
+        <label class="opt"><input type="checkbox" id="opt-inherited"> Show a theme's values when unset</label>
         <label class="opt"><input type="checkbox" id="opt-hide" checked> Hide the textarea</label>
         <label class="opt"><input type="checkbox" id="opt-readonly"> Read-only</label>
       </fieldset>
@@ -115,7 +116,7 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);</textarea>
 
 <footer class="site-footer">
   <div class="wrap">
-    kStyleEditor 0.1.1 — MIT licensed.
+    kStyleEditor 0.1.2 — MIT licensed.
     <a href="https://github.com/KAStrack/kStyleEditor">Source on GitHub</a>.
   </div>
 </footer>
@@ -128,6 +129,9 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);</textarea>
     var defaults = { basic: KStyleEditor.DEFAULT_BASIC, advanced: KStyleEditor.DEFAULT_ADVANCED };
     var SWATCHES = [['#111827', 'Ink'], ['#ffffff', 'Paper'], ['#2563eb', 'Brand blue'], ['#16a34a', 'Go green'],
       ['#ca8a04', 'Gold'], ['#dc2626', 'Alert red'], ['transparent', 'None']];
+    // What a page's theme might give these properties: unset fields show them.
+    var INHERITED = { color: '#1f2933', 'font-family': 'Helvetica, Arial, sans-serif', 'font-size': '16px',
+      'font-weight': '400', 'line-height': '1.5', 'background-color': '#f8fafc', 'text-align': 'left' };
     var $ = function (id) { return document.getElementById(id); };
     var editor = null;
 
@@ -179,6 +183,7 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);</textarea>
       if ($('opt-tab').value !== 'basic') o.startTab = $('opt-tab').value;
       if (!$('opt-code').checked) o.code = false;
       if ($('opt-swatches').checked) o.swatches = SWATCHES;
+      if ($('opt-inherited').checked) o.inherited = INHERITED;
       if (!$('opt-hide').checked) o.hideTextarea = false;
       if ($('opt-readonly').checked) o.readOnly = true;
       return o;

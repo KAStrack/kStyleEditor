@@ -1,5 +1,5 @@
 /*!
- * kStyleCss 0.1.1
+ * kStyleCss 0.1.2
  * Parse, serialise and sanitise the CSS declarations kStyleEditor writes.
  * The editor uses it in the browser; it is also the JavaScript / Node SDK.
  * MIT Licence. https://github.com/KAStrack/kStyleEditor
@@ -18,7 +18,7 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var VERSION = '0.1.1';
+  var VERSION = '0.1.2';
 
   // ─── The default allow-list ───────────────────────────────────────────────
   //

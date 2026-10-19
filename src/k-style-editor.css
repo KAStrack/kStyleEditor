@@ -1,5 +1,5 @@
 /*!
- * kStyleEditor 0.1.1 — editor stylesheet
+ * kStyleEditor 0.1.2 — editor stylesheet
  * MIT Licence. https://github.com/KAStrack/kStyleEditor
  *
  * Every colour and size is a --kse-* custom property on .kse, so a theme is a
@@ -23,6 +23,7 @@
   --kse-warn-bg: #fff6e5;
   --kse-check-a: #e9edf2;
   --kse-check-b: #ffffff;
+  --kse-inherited: #8a95a5;
   --kse-radius: 8px;
   --kse-radius-sm: 5px;
   --kse-font: inherit;
@@ -65,6 +66,7 @@
     --kse-warn-bg: #2b2414;
     --kse-check-a: #2a3039;
     --kse-check-b: #1f242c;
+    --kse-inherited: #707c8c;
   }
 }
 
@@ -84,6 +86,7 @@
   --kse-warn-bg: #2b2414;
   --kse-check-a: #2a3039;
   --kse-check-b: #1f242c;
+  --kse-inherited: #707c8c;
 }
 
 .kse *, .kse *::before, .kse *::after { box-sizing: border-box; }
@@ -380,6 +383,10 @@
   border-bottom: 1.5px solid var(--kse-muted);
   transform: rotate(45deg);
 }
+
+/* Unset, showing the colour it inherits: a dashed ring says "not chosen
+   here" without hiding the colour. */
+.kse-colour[data-inherited="true"] .kse-swatch { border-style: dashed; border-color: var(--kse-inherited); }
 
 .kse .kse-swatch:hover { border-color: var(--kse-accent); }
 .kse .kse-swatch[aria-expanded="true"] { border-color: var(--kse-accent); box-shadow: 0 0 0 2px var(--kse-accent-soft); }
